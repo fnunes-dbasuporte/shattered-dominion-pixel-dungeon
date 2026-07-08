@@ -344,11 +344,6 @@ export class Match {
   }
 
   private onZeroHp(victim: Actor, killer: Actor): void {
-    if (isPlayer(victim)) {
-      // morte de jogador (espectador/revive) chega na próxima tarefa
-      return;
-    }
-
     this.pendingEvents.push({
       type: "death",
       actorId: victim.id,
@@ -357,9 +352,68 @@ export class Match {
       y: victim.y,
     });
     this.occupancy.delete(this.level.grid.index(victim.x, victim.y));
-    this.actors.delete(victim.id);
 
+    if (isPlayer(victim)) {
+      // vira espectador: fica no mundo como fantasma (fora da ocupação),
+      // sem agir; a visão passa a ser a união do que os vivos veem.
+      victim.alive = false;
+      victim.intent = null;
+      return;
+    }
+
+    this.actors.delete(victim.id);
     if (isPlayer(killer)) this.awardXp(killer, MOB_DEFS[victim.kind].xpReward);
+  }
+
+  /** Rota de dano direta para preparar cenários de morte em testes. */
+  damageForTest(id: string, amount: number): void {
+    const actor = this.actors.get(id);
+    if (!actor) return;
+    actor.hp = Math.max(0, actor.hp - amount);
+    if (actor.hp === 0) this.onZeroHp(actor, actor);
+  }
+
+  /** Todos os mortos revivem com 50% do HP ao lado da escada de descida. */
+  private reviveDeadPlayers(): void {
+    const { grid } = this.level;
+    for (const actor of this.actors.values()) {
+      if (!isPlayer(actor) || actor.alive) continue;
+      const spot = this.findFreeTileNear(this.level.stairsDown);
+      if (!spot) continue; // sem espaço — tenta de novo no próximo uso da escada
+
+      actor.x = spot.x;
+      actor.y = spot.y;
+      actor.alive = true;
+      actor.hp = Math.ceil(actor.maxHp / 2);
+      actor.nextActionAt = this.tick + TICKS_PER_TIME_UNIT;
+      this.occupancy.set(grid.index(spot.x, spot.y), actor.id);
+      this.pendingEvents.push({
+        type: "revive",
+        actorId: actor.id,
+        name: actor.name,
+        x: spot.x,
+        y: spot.y,
+      });
+    }
+  }
+
+  /** BFS pelo tile passável e livre mais próximo (inclui o próprio ponto). */
+  private findFreeTileNear(origin: Vec2): Vec2 | null {
+    const grid = this.level.grid;
+    const visited = new Set<number>([grid.index(origin.x, origin.y)]);
+    const queue: Vec2[] = [origin];
+    while (queue.length > 0) {
+      const current = queue.shift() as Vec2;
+      const i = grid.index(current.x, current.y);
+      if (!this.occupancy.has(i) && SPAWNABLE.has(grid.tiles[i])) return current;
+      for (const n of grid.neighbors4(current.x, current.y)) {
+        const ni = grid.index(n.x, n.y);
+        if (visited.has(ni)) continue;
+        visited.add(ni);
+        if (grid.tiles[ni] !== TileType.Wall) queue.push(n);
+      }
+    }
+    return null;
   }
 
   private awardXp(player: PlayerActor, amount: number): void {
@@ -394,6 +448,16 @@ export class Match {
     actor.x += dir.x;
     actor.y += dir.y;
     actor.nextActionAt = this.tick + moveCostTicks(actor.speed);
+
+    // "usar" a escada de descida = pisar nela; revive os mortos do grupo
+    // (a descida real de andar chega na sprint 07)
+    if (
+      isPlayer(actor) &&
+      actor.x === this.level.stairsDown.x &&
+      actor.y === this.level.stairsDown.y
+    ) {
+      this.reviveDeadPlayers();
+    }
     return true;
   }
 
@@ -401,10 +465,23 @@ export class Match {
 
   /** Visões que mudaram desde o último envio (a primeira sempre é enviada). */
   private collectVisions(): Map<string, VisionMessage> {
+    const grid = this.level.grid;
+
+    // FOV dos vivos primeiro; espectadores enxergam a união do grupo
+    const livingFovs = new Map<string, Set<number>>();
+    for (const actor of this.actors.values()) {
+      if (isPlayer(actor) && actor.alive) {
+        livingFovs.set(actor.id, computeFov(grid, actor, FOV_RADIUS));
+      }
+    }
+    const groupFov = new Set<number>();
+    for (const fov of livingFovs.values()) for (const i of fov) groupFov.add(i);
+
     const out = new Map<string, VisionMessage>();
     for (const actor of this.actors.values()) {
       if (!isPlayer(actor)) continue;
-      const message = this.buildVision(actor);
+      const fov = actor.alive ? livingFovs.get(actor.id)! : groupFov;
+      const message = this.buildVision(actor, fov);
       const key = JSON.stringify([message.you, message.visible, message.actors]);
       if (
         key !== actor.lastVisionKey ||
@@ -419,9 +496,8 @@ export class Match {
     return out;
   }
 
-  private buildVision(player: PlayerActor): VisionMessage {
+  private buildVision(player: PlayerActor, fov: Set<number>): VisionMessage {
     const grid = this.level.grid;
-    const fov = computeFov(grid, player, FOV_RADIUS);
 
     const discovered: [number, number][] = [];
     for (const i of fov) {
@@ -433,6 +509,7 @@ export class Match {
 
     const actorsInView: VisibleActor[] = [];
     for (const other of this.actors.values()) {
+      if (isPlayer(other) && !other.alive) continue; // fantasmas não aparecem
       if (fov.has(grid.index(other.x, other.y))) {
         actorsInView.push({
           id: other.id,

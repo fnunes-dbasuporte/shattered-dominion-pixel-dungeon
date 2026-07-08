@@ -375,3 +375,99 @@ describe("Match — combate", () => {
     expect(hp).toBeLessThan(20);
   });
 });
+
+describe("Match — morte de jogador, espectador e revive", () => {
+  it("a 0 HP vira espectador: alive=false, tile liberado, intenções ignoradas", () => {
+    const match = new Match(
+      makeTestLevel([
+        { x: 2, y: 2 },
+        { x: 4, y: 2 },
+      ]),
+    );
+    match.addPlayer("a", "A");
+    match.addPlayer("b", "B");
+    match.damageForTest("a", 999);
+
+    const v = match.update().get("a")!;
+    expect(v.you.alive).toBe(false);
+    expect(v.events.some((e) => e.type === "death")).toBe(true);
+
+    // intenção do morto é ignorada
+    match.queueIntent("a", 1, 0);
+    match.update();
+    expect(match.positionOf("a")).toEqual({ x: 2, y: 2 });
+
+    // o tile do corpo fica livre: B anda até lá
+    match.queueIntent("b", -1, 0);
+    for (let t = 0; t < 12; t++) match.update();
+    match.queueIntent("b", -1, 0);
+    for (let t = 0; t < 12; t++) match.update();
+    expect(match.positionOf("b")).toEqual({ x: 2, y: 2 });
+  });
+
+  it("espectador vê a união do que os vivos veem (e não aparece como ator)", () => {
+    const match = new Match(
+      makeTestLevel([
+        { x: 2, y: 2 },
+        { x: 20, y: 2 }, // B longe, fora do raio do próprio A
+      ]),
+    );
+    match.addPlayer("a", "A");
+    match.addPlayer("b", "B");
+    match.damageForTest("a", 999);
+
+    const v = match.update().get("a")!;
+    // vê a área ao redor de B (que A jamais alcançaria com o próprio FOV)
+    expect(v.visible).toContain(match.level.grid.index(20, 2));
+    const ids = v.actors.map((x) => x.id);
+    expect(ids).toContain("b");
+    expect(ids).not.toContain("a"); // fantasma
+  });
+
+  it("aliado pisando na escada de descida revive o morto com 50% do HP", () => {
+    // andar pequeno: escada de descida em (6,6)
+    const match = new Match(
+      makeTestLevel(
+        [
+          { x: 2, y: 2 },
+          { x: 3, y: 2 },
+        ],
+        8,
+        8,
+      ),
+    );
+    match.addPlayer("a", "A");
+    match.addPlayer("b", "B");
+    match.damageForTest("a", 999);
+    match.update();
+
+    // B caminha até a escada (6,6), um passo guiado por vez
+    const eventos: { type: string }[] = [];
+    let atoresVistosPorB: string[] = [];
+    for (let passo = 0; passo < 8; passo++) {
+      const pos = match.positionOf("b")!;
+      if (pos.x === 6 && pos.y === 6) break;
+      match.queueIntent("b", Math.sign(6 - pos.x), Math.sign(6 - pos.y));
+      for (let t = 0; t < 12; t++) {
+        const v = match.update().get("b");
+        if (v) {
+          eventos.push(...v.events);
+          atoresVistosPorB = v.actors.map((x) => x.id);
+        }
+      }
+    }
+    expect(match.positionOf("b")).toEqual({ x: 6, y: 6 });
+    expect(eventos.some((e) => e.type === "revive")).toBe(true);
+
+    const a = match.actorForTest("a")!;
+    expect(a.kind).toBe("player");
+    if (a.kind === "player") expect(a.alive).toBe(true);
+    expect(a.hp).toBe(10); // 50% de 20
+    // renasceu perto da escada
+    const dist = Math.max(Math.abs(a.x - 6), Math.abs(a.y - 6));
+    expect(dist).toBeLessThanOrEqual(2);
+
+    // e voltou a aparecer como ator na visão do aliado
+    expect(atoresVistosPorB).toContain("a");
+  });
+});
