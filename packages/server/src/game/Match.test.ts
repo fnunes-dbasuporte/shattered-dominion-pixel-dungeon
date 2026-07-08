@@ -1,5 +1,12 @@
 import { describe, expect, it } from "vitest";
-import { Grid, TileType, type Level, type Vec2 } from "@shattered-dominion/shared";
+import {
+  Grid,
+  RoomType,
+  TileType,
+  rectContains,
+  type Level,
+  type Vec2,
+} from "@shattered-dominion/shared";
 import { Match } from "./Match.js";
 
 /** Andar sintético: retângulo aberto com borda de parede e spawns dados. */
@@ -155,5 +162,63 @@ describe("Match — visão por jogador", () => {
     match.update(); // visão inicial
     expect(match.update().size).toBe(0);
     expect(match.update().size).toBe(0);
+  });
+
+  it("you carrega hp/level/xp/alive do Guerreiro nível 1", () => {
+    const match = new Match(makeTestLevel([{ x: 2, y: 2 }]));
+    match.addPlayer("a", "A");
+    const v = match.update().get("a")!;
+    expect(v.you).toMatchObject({ hp: 20, maxHp: 20, level: 1, xp: 0, alive: true });
+    expect(v.you.xpToNext).toBeGreaterThan(0);
+  });
+});
+
+describe("Match — spawn de mobs", () => {
+  it("fromSeed povoa 4–8 mobs fora da sala de entrada, sem sobreposição (20 seeds)", () => {
+    for (let seed = 1; seed <= 20; seed++) {
+      const match = Match.fromSeed(seed, 1);
+      expect(match.mobCount).toBeGreaterThanOrEqual(4);
+      expect(match.mobCount).toBeLessThanOrEqual(8);
+
+      const entrance = match.level.rooms.find((r) => r.type === RoomType.Entrance)!;
+      const seen = new Set<string>();
+      for (const [id, pos] of match.mobPositionsForTest()) {
+        expect(rectContains(entrance, pos.x, pos.y)).toBe(false);
+        const key = `${pos.x},${pos.y}`;
+        expect(seen.has(key)).toBe(false);
+        seen.add(key);
+        expect(id.startsWith("mob-")).toBe(true);
+      }
+    }
+  });
+
+  it("mob próximo aparece na visão com kind/hp; distante não aparece", () => {
+    const match = new Match(makeTestLevel([{ x: 2, y: 2 }]));
+    match.addPlayer("a", "A");
+    match.spawnMobAt("rat", 5, 2); // dist 3 — visível
+    match.spawnMobAt("crab", 20, 2); // dist 18 — fora do raio 8
+
+    const v = match.update().get("a")!;
+    const ids = v.actors.map((x) => x.id);
+    expect(ids).toContain("mob-1");
+    expect(ids).not.toContain("mob-2");
+
+    const rato = v.actors.find((x) => x.id === "mob-1")!;
+    expect(rato.kind).toBe("rat");
+    expect(rato.hp).toBe(rato.maxHp);
+    expect(rato.name).toBe("Rato do Esgoto");
+  });
+
+  it("mobs são determinísticos por seed", () => {
+    const a = Match.fromSeed(77, 1);
+    const b = Match.fromSeed(77, 1);
+    expect([...a.mobPositionsForTest()]).toEqual([...b.mobPositionsForTest()]);
+  });
+
+  it("respawn não ultrapassa o teto do andar", () => {
+    const match = Match.fromSeed(3, 1);
+    const cap = match.mobCount;
+    for (let t = 0; t < 1300; t++) match.update();
+    expect(match.mobCount).toBe(cap);
   });
 });

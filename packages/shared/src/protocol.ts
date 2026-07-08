@@ -1,4 +1,5 @@
 import { TICKS_PER_TIME_UNIT } from "./constants.js";
+import type { MobKind } from "./mobs.js";
 
 /** Nomes das mensagens cliente ⇄ servidor. */
 export const MessageType = {
@@ -25,18 +26,36 @@ export interface MatchStartedMessage {
   depth: number;
 }
 
+export type ActorKind = "player" | MobKind;
+
 export interface VisibleActor {
   id: string;
   name: string;
+  kind: ActorKind;
   x: number;
   y: number;
+  hp: number;
+  maxHp: number;
   /** duração do movimento em ticks — o cliente usa para interpolar. */
   moveTicks: number;
 }
 
+/** Estado privado do próprio jogador — só ele recebe. */
+export interface YouState {
+  x: number;
+  y: number;
+  nextActionAt: number;
+  hp: number;
+  maxHp: number;
+  level: number;
+  xp: number;
+  xpToNext: number;
+  alive: boolean;
+}
+
 export interface VisionMessage {
   tick: number;
-  you: { x: number; y: number; nextActionAt: number };
+  you: YouState;
   /** índices dos tiles visíveis agora. */
   visible: number[];
   /** tiles recém-descobertos: pares [índice, TileType] — memória do mapa. */
