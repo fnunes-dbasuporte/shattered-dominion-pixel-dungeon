@@ -1,22 +1,22 @@
 # Shattered Dominion Pixel Dungeon
 
-Roguelike multiplayer cooperativo (até **8 jogadores**) para navegador, inspirado nas *mecânicas* do
+Roguelike multiplayer cooperativo (até **8 jogadores**) para navegador, inspirado nas _mecânicas_ do
 [Pixel Dungeon](https://pixeldungeon.watabou.ru/) de watabou. Explore a masmorra em tempo real com
 seus amigos: o mundo anda sozinho, mas cada ação tem custo de tempo como num roguelike clássico.
 
 > **English summary:** Shattered Dominion Pixel Dungeon is a browser-based co-op multiplayer
-> roguelike (up to 8 players) inspired by the *mechanics* of watabou's Pixel Dungeon. Real-time
+> roguelike (up to 8 players) inspired by the _mechanics_ of watabou's Pixel Dungeon. Real-time
 > with server ticks, authoritative Node.js server, Phaser 4 client. It is a mechanics clone only —
 > it contains **no code, assets, names or text** from the original game. Licensed GPL-3.0-or-later.
 
 ## Stack
 
-| Camada | Tecnologia |
-|---|---|
-| Cliente | [Phaser 4](https://phaser.io/) + TypeScript + Vite |
-| Servidor | Node.js 22+ + [Colyseus](https://colyseus.io/) (100% autoritativo, 10 ticks/s) |
+| Camada        | Tecnologia                                                                                  |
+| ------------- | ------------------------------------------------------------------------------------------- |
+| Cliente       | [Phaser 4](https://phaser.io/) + TypeScript + Vite                                          |
+| Servidor      | Node.js 22+ + [Colyseus](https://colyseus.io/) (100% autoritativo, 10 ticks/s)              |
 | Compartilhado | `packages/shared` — lógica de jogo determinística (RNG seedado, geração de dungeon, regras) |
-| Monorepo | pnpm workspaces |
+| Monorepo      | pnpm workspaces                                                                             |
 
 ```
 [Cliente Phaser 4] ⇄ WebSocket (Colyseus) ⇄ [Servidor Node 22]

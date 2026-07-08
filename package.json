@@ -12,5 +12,21 @@
   "repository": {
     "type": "git",
     "url": "https://github.com/fnunes-dbasuporte/shattered-dominion-pixel-dungeon.git"
+  },
+  "scripts": {
+    "dev": "pnpm --filter @shattered-dominion/shared build && concurrently -k -n shared,server,client -c blue,green,magenta \"pnpm --filter @shattered-dominion/shared dev\" \"pnpm --filter @shattered-dominion/server dev\" \"pnpm --filter @shattered-dominion/client dev\"",
+    "build": "pnpm -r build",
+    "test": "pnpm -r test",
+    "lint": "eslint . && prettier --check .",
+    "format": "prettier --write ."
+  },
+  "devDependencies": {
+    "@eslint/js": "^10.0.1",
+    "concurrently": "^10.0.3",
+    "eslint": "^10.6.0",
+    "eslint-config-prettier": "^10.1.8",
+    "prettier": "^3.9.4",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.63.0"
   }
 }

@@ -13,7 +13,9 @@ describe("Rng (mulberry32)", () => {
   });
 
   it("seed em string é estável e equivale ao hash numérico", () => {
-    expect(sequence(new Rng("esgotos-1"), 10)).toEqual(sequence(new Rng(hashSeed("esgotos-1")), 10));
+    expect(sequence(new Rng("esgotos-1"), 10)).toEqual(
+      sequence(new Rng(hashSeed("esgotos-1")), 10),
+    );
   });
 
   it("next() fica em [0, 1)", () => {
