@@ -5,6 +5,8 @@ export * from "./protocol.js";
 export * from "./balance.js";
 export * from "./mobs.js";
 export * from "./ai.js";
+export * from "./items/defs.js";
+export * from "./items/appearance.js";
 export * from "./dungeon/rect.js";
 export * from "./dungeon/grid.js";
 export * from "./dungeon/level.js";
