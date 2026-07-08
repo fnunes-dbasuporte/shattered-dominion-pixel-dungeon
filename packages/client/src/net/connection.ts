@@ -66,4 +66,20 @@ export class GameConnection {
     const msg: MoveMessage = { dx, dy };
     this.room.send(MessageType.Move, msg);
   }
+
+  sendPickup(): void {
+    this.room.send(MessageType.Pickup);
+  }
+
+  sendEquip(uid: string): void {
+    this.room.send(MessageType.Equip, { uid });
+  }
+
+  sendUse(uid: string, targetUid?: string): void {
+    this.room.send(MessageType.Use, targetUid ? { uid, targetUid } : { uid });
+  }
+
+  sendDrop(uid: string): void {
+    this.room.send(MessageType.Drop, { uid });
+  }
 }

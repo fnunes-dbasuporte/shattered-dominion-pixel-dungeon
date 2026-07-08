@@ -11,6 +11,16 @@ import {
   type YouState,
 } from "@shattered-dominion/shared";
 import type { GameConnection } from "../net/connection.js";
+import { InventoryPanel } from "../ui/inventory.js";
+
+const ITEM_GLYPHS: Record<string, { char: string; color: string }> = {
+  weapon: { char: "†", color: "#cfd2d8" },
+  armor: { char: "▣", color: "#8f9bb3" },
+  potion: { char: "!", color: "#b35de8" },
+  scroll: { char: "?", color: "#e8c04d" },
+  food: { char: "%", color: "#b3854d" },
+  gold: { char: "$", color: "#ffd700" },
+};
 
 export const TILE_PX = 24;
 
@@ -91,6 +101,9 @@ export class GameScene extends Phaser.Scene {
   private logText!: Phaser.GameObjects.Text;
   private logLines: string[] = [];
   private atores = new Map<string, ActorSprite>();
+  private itensChao = new Map<string, Phaser.GameObjects.Text>();
+  private invPanel!: InventoryPanel;
+  private statusText!: Phaser.GameObjects.Text;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private lastSentAt = 0;
   private lastSentDir = "";
@@ -160,6 +173,16 @@ export class GameScene extends Phaser.Scene {
       Phaser.Input.Keyboard.Key
     >;
 
+    this.statusText = this.add
+      .text(12, 0, "", { fontFamily: "monospace", fontSize: "12px", color: "#b35de8" })
+      .setScrollFactor(0)
+      .setDepth(101);
+
+    this.invPanel = new InventoryPanel(this.conn);
+    this.input.keyboard!.on("keydown-I", () => this.invPanel.toggle());
+    this.input.keyboard!.on("keydown-ESC", () => this.invPanel.close());
+
+    this.reposicionarUi(); // reposiciona incluindo o statusText recém-criado
     this.conn.onVision((v) => this.onVision(v));
   }
 
@@ -167,11 +190,13 @@ export class GameScene extends Phaser.Scene {
     const cam = this.cameras.main;
     this.hudGfx.setPosition(0, cam.height - 54);
     this.hudText.setPosition(12, cam.height - 50);
+    this.statusText?.setPosition(220, cam.height - 50);
     this.logText.setPosition(cam.width - 10, cam.height - 10);
     this.banner.setX(cam.width / 2);
   }
 
   override update(time: number): void {
+    if (this.invPanel.isOpen) return; // painel aberto pausa o input do jogo
     const dir = this.readKeyboardDir();
 
     if (!this.you.alive) {
@@ -222,10 +247,37 @@ export class GameScene extends Phaser.Scene {
     this.redrawMap();
     const dyingIds = this.processEvents(v.events);
     const newActorIds = this.syncActors(v.actors, dyingIds);
+    this.syncFloorItems(v);
+    this.invPanel.update(v.you);
     this.drawHud();
     this.banner.setVisible(!v.you.alive);
     this.updateTopBar(v.actors.length);
     this.onVisionExtra(v, newActorIds);
+  }
+
+  /** Glifos coloridos por categoria para itens/ouro no chão. */
+  private syncFloorItems(v: VisionMessage): void {
+    const present = new Set(v.items.map((i) => i.id));
+    for (const [id, sprite] of this.itensChao) {
+      if (!present.has(id)) {
+        sprite.destroy();
+        this.itensChao.delete(id);
+      }
+    }
+    for (const item of v.items) {
+      if (this.itensChao.has(item.id)) continue;
+      const glyph = ITEM_GLYPHS[item.category] ?? { char: "•", color: "#ffffff" };
+      const t = this.add
+        .text(tileToWorld(item.x), tileToWorld(item.y), glyph.char, {
+          fontFamily: "monospace",
+          fontSize: "14px",
+          color: glyph.color,
+          fontStyle: "bold",
+        })
+        .setOrigin(0.5)
+        .setDepth(6);
+      this.itensChao.set(item.id, t);
+    }
   }
 
   /**
@@ -277,6 +329,9 @@ export class GameScene extends Phaser.Scene {
         case "revive":
           this.floatingText(e.x, e.y, "reviveu!", "#4da3e8");
           this.pushLog(`${e.name} reviveu`);
+          break;
+        case "info":
+          this.pushLog(e.text);
           break;
       }
     }
@@ -432,7 +487,8 @@ export class GameScene extends Phaser.Scene {
     g.fillStyle(0xe8c04d);
     g.fillRect(12, 34, 180 * Math.min(1, xp / xpToNext), 4);
 
-    this.hudText.setText(`HP ${hp}/${maxHp} · Nv ${level}`);
+    this.hudText.setText(`HP ${hp}/${maxHp} · Nv ${level} · $${this.you.gold} · I inventário`);
+    this.statusText.setText(this.you.statuses.includes("veneno") ? "☠ envenenado" : "");
   }
 
   private updateTopBar(visiveis: number): void {

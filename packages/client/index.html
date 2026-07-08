@@ -139,6 +139,106 @@
         text-align: center;
         margin: 0;
       }
+
+      /* ── inventário ── */
+      #inv {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(11, 10, 16, 0.72);
+        z-index: 20;
+        font-family: monospace;
+      }
+      .inv-card {
+        background: #17141f;
+        border: 1px solid #2c2740;
+        border-radius: 8px;
+        padding: 18px 20px;
+        width: min(640px, 94vw);
+      }
+      .inv-head {
+        color: #e8c04d;
+        font-size: 14px;
+        margin-bottom: 12px;
+        text-align: center;
+      }
+      .inv-grid {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 8px;
+      }
+      .inv-slot {
+        background: #0b0a10;
+        border: 1px solid #2c2740;
+        border-radius: 6px;
+        min-height: 86px;
+        padding: 6px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+        font-size: 11px;
+      }
+      .inv-slot.vazio {
+        opacity: 0.35;
+      }
+      .inv-slot.alvo {
+        cursor: pointer;
+        border-color: #e8c04d;
+      }
+      .inv-glyph {
+        font-size: 16px;
+        font-weight: bold;
+      }
+      .cat-weapon {
+        color: #cfd2d8;
+      }
+      .cat-armor {
+        color: #8f9bb3;
+      }
+      .cat-potion {
+        color: #b35de8;
+      }
+      .cat-scroll {
+        color: #e8c04d;
+      }
+      .cat-food {
+        color: #b3854d;
+      }
+      .inv-label {
+        color: #e8e6f0;
+        flex: 1;
+      }
+      .equipado {
+        color: #5fce6b;
+      }
+      .inv-actions {
+        display: flex;
+        gap: 4px;
+      }
+      .inv-actions button {
+        flex: 1;
+        background: #4da3e8;
+        color: #0b0a10;
+        border: 0;
+        border-radius: 3px;
+        padding: 4px 2px;
+        font-family: monospace;
+        font-size: 10px;
+        font-weight: bold;
+        cursor: pointer;
+      }
+      .inv-actions button.secundario {
+        background: #2c2740;
+        color: #9a96ad;
+      }
+      .inv-hint {
+        color: #55506b;
+        font-size: 11px;
+        text-align: center;
+        margin-top: 10px;
+      }
     </style>
   </head>
   <body>
