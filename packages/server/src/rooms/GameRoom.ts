@@ -1,6 +1,6 @@
 import { Room, ServerError, type Client } from "@colyseus/core";
 import { MapSchema, Schema, type } from "@colyseus/schema";
-import { MAX_PLAYERS } from "@shattered-dominion/shared";
+import { MAX_PLAYERS, type GamePhase } from "@shattered-dominion/shared";
 
 export class PlayerState extends Schema {
   @type("string") sessionId = "";
@@ -8,6 +8,9 @@ export class PlayerState extends Schema {
 }
 
 export class GameState extends Schema {
+  @type("string") phase: GamePhase = "lobby";
+  @type("string") hostSessionId = "";
+  @type("uint8") depth = 0;
   @type({ map: PlayerState }) players = new MapSchema<PlayerState>();
 }
 
