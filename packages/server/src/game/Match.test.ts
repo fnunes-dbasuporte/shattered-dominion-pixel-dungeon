@@ -599,6 +599,60 @@ describe("Match — inventário e ações", () => {
   });
 });
 
+describe("Match — efeitos em runtime (veneno)", () => {
+  function envenenado() {
+    const match = new Match(makeTestLevel([{ x: 2, y: 2 }]));
+    match.addPlayer("a", "A");
+    match.placeLootAt(3, 2, { kind: "item", itemId: "poison", upgrade: 0 });
+    match.queueIntent("a", 1, 0);
+    match.update();
+    const player = match.actorForTest("a")!;
+    if (player.kind !== "player") throw new Error();
+    match.use("a", player.inventory[0].uid);
+    return { match, player };
+  }
+
+  it("beber veneno aplica status e causa 1 de dano por unidade de tempo", () => {
+    const { match, player } = envenenado();
+    expect(player.identified.has("poison")).toBe(true);
+
+    match.queueIntent("a", 0, 1);
+    const v = match.update().get("a")!;
+    expect(v.you.statuses).toContain("veneno");
+
+    const hpInicial = player.hp;
+    for (let t = 0; t < 30; t++) match.update(); // 3 unidades de tempo
+    expect(player.hp).toBe(hpInicial - 3);
+  });
+
+  it("veneno expira após 8 unidades (dano total 8) e o status some", () => {
+    const { match, player } = envenenado();
+    const hpInicial = player.hp;
+    for (let t = 0; t < 120; t++) match.update(); // 12 unidades — além da duração
+    expect(player.hp).toBe(hpInicial - 8);
+
+    match.queueIntent("a", 0, 1);
+    let statuses: string[] = ["?"];
+    for (let t = 0; t < 12; t++) {
+      const v = match.update().get("a");
+      if (v) statuses = v.you.statuses;
+    }
+    expect(statuses).toEqual([]);
+  });
+
+  it("veneno pode matar: vira espectador com evento de morte", () => {
+    const { match, player } = envenenado();
+    match.damageForTest("a", player.hp - 3); // sobra 3 HP; veneno dá 8
+    const eventos: string[] = [];
+    for (let t = 0; t < 60; t++) {
+      const v = match.update().get("a");
+      if (v) eventos.push(...v.events.map((e) => e.type));
+    }
+    expect(player.alive).toBe(false);
+    expect(eventos).toContain("death");
+  });
+});
+
 describe("Match — morte de jogador, espectador e revive", () => {
   it("a 0 HP vira espectador: alive=false, tile liberado, intenções ignoradas", () => {
     const match = new Match(

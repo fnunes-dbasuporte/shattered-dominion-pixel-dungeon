@@ -23,6 +23,8 @@ import {
   HEAL_POTION_AMOUNT,
   WEAPONS,
   applyArmor,
+  POISON_DAMAGE_PER_UNIT,
+  POISON_DURATION_UNITS,
   displayLabel,
   itemCategory,
   itemTrueName,
@@ -83,6 +85,8 @@ export interface PlayerActor extends ActorBase {
   inventory: ItemInstance[];
   equippedWeapon: string | null;
   equippedArmor: string | null;
+  /** envenenado até este tick (0 = saudável). */
+  poisonedUntilTick: number;
   /** buffer de 1 slot — a última intenção recebida vence. */
   intent: Vec2 | null;
   /** memória do mapa: índices de tiles já descobertos por ESTE jogador. */
@@ -179,6 +183,7 @@ export class Match {
       inventory: [],
       equippedWeapon: null,
       equippedArmor: null,
+      poisonedUntilTick: 0,
       intent: null,
       discovered: new Set(),
       lastVisionKey: "",
@@ -507,8 +512,30 @@ export class Match {
     }
   }
 
-  /** Veneno é implementado na tarefa de efeitos em runtime. */
-  protected applyPoison(_p: PlayerActor): void {}
+  /** Envenena por 8 unidades de tempo (renova a duração se já ativo). */
+  private applyPoison(p: PlayerActor): void {
+    p.poisonedUntilTick = this.tick + POISON_DURATION_UNITS * TICKS_PER_TIME_UNIT;
+  }
+
+  /** Tique de veneno: 1 de dano por unidade de tempo, ignora armadura. */
+  private processStatuses(): void {
+    if (this.tick % TICKS_PER_TIME_UNIT !== 0) return;
+    for (const actor of this.actors.values()) {
+      if (!isPlayer(actor) || !actor.alive || actor.poisonedUntilTick <= this.tick) continue;
+      actor.hp = Math.max(0, actor.hp - POISON_DAMAGE_PER_UNIT);
+      this.pendingEvents.push({
+        type: "hit",
+        attackerId: actor.id,
+        attackerName: "Veneno",
+        targetId: actor.id,
+        targetName: actor.name,
+        x: actor.x,
+        y: actor.y,
+        damage: POISON_DAMAGE_PER_UNIT,
+      });
+      if (actor.hp === 0) this.onZeroHp(actor, actor);
+    }
+  }
 
   /** Recalcula os stats efetivos (nível + arma + força). */
   private applyEquipment(p: PlayerActor): void {
@@ -579,6 +606,8 @@ export class Match {
       if (isPlayer(actor)) this.actPlayer(actor);
       else this.actMob(actor, playersSnapshot);
     }
+
+    this.processStatuses();
 
     // respawn lento até o teto do andar
     if (this.tick % MOB_RESPAWN_TICKS === 0 && this.mobCount < this.mobCap) {
@@ -725,6 +754,7 @@ export class Match {
       actor.y = spot.y;
       actor.alive = true;
       actor.hp = Math.ceil(actor.maxHp / 2);
+      actor.poisonedUntilTick = 0;
       actor.nextActionAt = this.tick + TICKS_PER_TIME_UNIT;
       this.occupancy.set(grid.index(spot.x, spot.y), actor.id);
       this.pendingEvents.push({
@@ -910,7 +940,7 @@ export class Match {
       gold: player.gold,
       strength: player.strength,
       defense: this.playerDefense(player),
-      statuses: [],
+      statuses: player.poisonedUntilTick > this.tick ? ["veneno"] : [],
       inventory,
     };
 
