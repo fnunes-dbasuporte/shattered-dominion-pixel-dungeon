@@ -17,4 +17,12 @@ export enum TileType {
   Door = 2,
   StairsUp = 3,
   StairsDown = 4,
+  Water = 5,
+  Grass = 6,
+  Embers = 7,
+}
+
+/** Tiles que um ator pode ocupar/atravessar (paredes são o único bloqueio no terreno). */
+export function isPassable(tile: TileType): boolean {
+  return tile !== TileType.Wall;
 }
