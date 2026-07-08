@@ -4,10 +4,14 @@ import { LEVEL_HEIGHT, LEVEL_WIDTH, type Level } from "./level.js";
 import { placeRooms } from "./rooms.js";
 import { connectRooms } from "./corridors.js";
 import { placeStairsAndSpawns } from "./stairs.js";
+import { decorateSewers } from "./decorate.js";
+
+/** Último andar do tema esgotos (v1.0 cobre os andares 1–5). */
+export const SEWERS_MAX_DEPTH = 5;
 
 /**
  * Gera um andar completo, 100% determinístico por (seed, depth):
- * salas → corredores/portas → escadas/spawns.
+ * salas → corredores/portas → escadas/spawns → decoração do tema.
  */
 export function generateLevel(seed: number, depth: number): Level {
   const rng = new Rng(seed).fork(`depth:${depth}`);
@@ -16,6 +20,11 @@ export function generateLevel(seed: number, depth: number): Level {
   const rooms = placeRooms(grid, rng);
   connectRooms(grid, rooms, rng);
   const { stairsUp, stairsDown, spawnPoints } = placeStairsAndSpawns(grid, rooms, rng);
+
+  if (depth <= SEWERS_MAX_DEPTH) {
+    const protectedTiles = new Set(spawnPoints.map((p) => grid.index(p.x, p.y)));
+    decorateSewers(grid, rooms, rng, protectedTiles);
+  }
 
   return {
     seed,

@@ -7,4 +7,5 @@ export * from "./dungeon/level.js";
 export * from "./dungeon/rooms.js";
 export * from "./dungeon/corridors.js";
 export * from "./dungeon/stairs.js";
+export * from "./dungeon/decorate.js";
 export * from "./dungeon/generateLevel.js";
