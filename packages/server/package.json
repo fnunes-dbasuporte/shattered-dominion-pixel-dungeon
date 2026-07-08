@@ -4,5 +4,27 @@
   "private": true,
   "description": "Servidor autoritativo (Node 22 + Colyseus)",
   "license": "GPL-3.0-or-later",
-  "type": "module"
+  "type": "module",
+  "scripts": {
+    "dev": "tsx watch src/index.ts",
+    "build": "tsc -p tsconfig.build.json",
+    "start": "node dist/index.js",
+    "test": "vitest run",
+    "test:watch": "vitest"
+  },
+  "dependencies": {
+    "@colyseus/core": "^0.17.44",
+    "@colyseus/schema": "^4.0.27",
+    "@colyseus/ws-transport": "^0.17.13",
+    "@shattered-dominion/shared": "workspace:*",
+    "express": "^5.2.1"
+  },
+  "devDependencies": {
+    "@colyseus/testing": "^0.17.11",
+    "@types/express": "^5.0.6",
+    "@types/node": "^22.19.11",
+    "tsx": "^4.23.0",
+    "typescript": "^5.9.3",
+    "vitest": "^4.1.10"
+  }
 }
