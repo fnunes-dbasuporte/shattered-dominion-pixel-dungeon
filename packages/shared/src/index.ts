@@ -1,6 +1,7 @@
 export * from "./constants.js";
 export * from "./types.js";
 export * from "./rng.js";
+export * from "./protocol.js";
 export * from "./dungeon/rect.js";
 export * from "./dungeon/grid.js";
 export * from "./dungeon/level.js";
@@ -9,3 +10,5 @@ export * from "./dungeon/corridors.js";
 export * from "./dungeon/stairs.js";
 export * from "./dungeon/decorate.js";
 export * from "./dungeon/generateLevel.js";
+export * from "./dungeon/fov.js";
+export * from "./dungeon/pathfind.js";
