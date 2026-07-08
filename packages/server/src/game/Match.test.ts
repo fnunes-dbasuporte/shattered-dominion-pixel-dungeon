@@ -376,6 +376,80 @@ describe("Match — combate", () => {
   });
 });
 
+describe("Match — loot no chão e pickup", () => {
+  it("fromSeed espalha itens (3+ contando tesouro) fora da sala de entrada (10 seeds)", () => {
+    for (let seed = 1; seed <= 10; seed++) {
+      const match = Match.fromSeed(seed, 1);
+      expect(match.floorItemCount).toBeGreaterThanOrEqual(3);
+      const entrance = match.level.rooms.find((r) => r.type === RoomType.Entrance)!;
+      for (const e of match.floorEntitiesForTest()) {
+        expect(rectContains(entrance, e.x, e.y)).toBe(false);
+      }
+    }
+  });
+
+  it("andar sobre um item pega automaticamente e some do chão", () => {
+    const match = new Match(makeTestLevel([{ x: 2, y: 2 }]));
+    match.addPlayer("a", "A");
+    match.placeLootAt(3, 2, { kind: "item", itemId: "dagger", upgrade: 0 });
+
+    match.queueIntent("a", 1, 0);
+    const v = match.update().get("a")!;
+    expect(v.you.inventory.map((i) => i.label)).toContain("Adaga");
+    expect(match.floorItemCount).toBe(0);
+    expect(v.events.some((e) => e.type === "info")).toBe(true);
+  });
+
+  it("ouro soma no contador individual e não entra no inventário", () => {
+    const match = new Match(makeTestLevel([{ x: 2, y: 2 }]));
+    match.addPlayer("a", "A");
+    match.placeLootAt(3, 2, { kind: "gold", amount: 25 });
+
+    match.queueIntent("a", 1, 0);
+    const v = match.update().get("a")!;
+    expect(v.you.gold).toBe(25);
+    expect(v.you.inventory).toHaveLength(0);
+  });
+
+  it("dois jogadores correndo para o mesmo item: só um pega, sem duplicação", () => {
+    const match = new Match(
+      makeTestLevel([
+        { x: 2, y: 2 },
+        { x: 4, y: 2 },
+      ]),
+    );
+    match.addPlayer("a", "A");
+    match.addPlayer("b", "B");
+    match.placeLootAt(3, 2, { kind: "item", itemId: "ration", upgrade: 0 });
+
+    match.queueIntent("a", 1, 0);
+    match.queueIntent("b", -1, 0);
+    const out = match.update();
+    const invA = out.get("a")?.you.inventory.length ?? 0;
+    const invB = out.get("b")?.you.inventory.length ?? 0;
+    expect(invA + invB).toBe(1);
+    expect(match.floorItemCount).toBe(0);
+  });
+
+  it("poção no chão aparece com rótulo de aparência (não revela o tipo)", () => {
+    const match = new Match(makeTestLevel([{ x: 2, y: 2 }]));
+    match.addPlayer("a", "A");
+    match.placeLootAt(4, 2, { kind: "item", itemId: "healing", upgrade: 0 });
+
+    const v = match.update().get("a")!;
+    const item = v.items.find((i) => i.category === "potion")!;
+    expect(item.label).toMatch(/^Poção /);
+    expect(item.label).not.toContain("Cura");
+  });
+
+  it("um tile nunca acumula dois itens", () => {
+    const match = new Match(makeTestLevel([{ x: 2, y: 2 }]));
+    expect(match.placeLootAt(5, 5, { kind: "gold", amount: 5 })).toBe(true);
+    expect(match.placeLootAt(5, 5, { kind: "gold", amount: 5 })).toBe(false);
+    expect(match.floorItemCount).toBe(1);
+  });
+});
+
 describe("Match — morte de jogador, espectador e revive", () => {
   it("a 0 HP vira espectador: alive=false, tile liberado, intenções ignoradas", () => {
     const match = new Match(

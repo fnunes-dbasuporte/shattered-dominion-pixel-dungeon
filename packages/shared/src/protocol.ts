@@ -1,5 +1,6 @@
 import { TICKS_PER_TIME_UNIT } from "./constants.js";
 import type { MobKind } from "./mobs.js";
+import type { ItemCategory } from "./items/defs.js";
 
 /** Nomes das mensagens cliente ⇄ servidor. */
 export const MessageType = {
@@ -7,6 +8,14 @@ export const MessageType = {
   Move: "move",
   /** cliente → servidor: host inicia a partida. */
   Start: "start",
+  /** cliente → servidor: pegar itens do tile atual. */
+  Pickup: "pickup",
+  /** cliente → servidor: equipar/desequipar arma ou armadura { uid }. */
+  Equip: "equip",
+  /** cliente → servidor: usar/beber/ler { uid, targetUid? }. */
+  Use: "use",
+  /** cliente → servidor: dropar { uid }. */
+  Drop: "drop",
   /** servidor → cliente: só o que ESTE jogador vê (anti-cheat de visão). */
   Vision: "vision",
   /** servidor → todos: partida começou (dimensões do andar; a seed é secreta). */
@@ -42,6 +51,25 @@ export interface VisibleActor {
   asleep: boolean;
 }
 
+/** Item no inventário, com rótulo já resolvido pela identificação do dono. */
+export interface InventoryEntry {
+  uid: string;
+  label: string;
+  category: ItemCategory;
+  identified: boolean;
+  equipped: boolean;
+  upgrade: number;
+}
+
+/** Item/ouro no chão, com rótulo resolvido pela identificação do viewer. */
+export interface VisibleItem {
+  id: string;
+  x: number;
+  y: number;
+  category: ItemCategory | "gold";
+  label: string;
+}
+
 /** Estado privado do próprio jogador — só ele recebe. */
 export interface YouState {
   x: number;
@@ -53,6 +81,11 @@ export interface YouState {
   xp: number;
   xpToNext: number;
   alive: boolean;
+  gold: number;
+  strength: number;
+  defense: number;
+  statuses: string[];
+  inventory: InventoryEntry[];
 }
 
 /** Eventos de combate/progressão — cada jogador só recebe os que enxerga. */
@@ -78,7 +111,9 @@ export type GameEvent =
     }
   | { type: "death"; actorId: string; name: string; x: number; y: number }
   | { type: "levelup"; actorId: string; name: string; level: number; x: number; y: number }
-  | { type: "revive"; actorId: string; name: string; x: number; y: number };
+  | { type: "revive"; actorId: string; name: string; x: number; y: number }
+  /** ações de item e avisos — texto já seguro (usa aparências, não identidades). */
+  | { type: "info"; actorId: string; text: string; x: number; y: number };
 
 export interface VisionMessage {
   tick: number;
@@ -89,6 +124,8 @@ export interface VisionMessage {
   discovered: [number, number][];
   /** atores dentro do FOV deste jogador (inclui o próprio). */
   actors: VisibleActor[];
+  /** itens no chão dentro do FOV. */
+  items: VisibleItem[];
   /** eventos deste tick visíveis a este jogador (ou que o envolvem). */
   events: GameEvent[];
 }

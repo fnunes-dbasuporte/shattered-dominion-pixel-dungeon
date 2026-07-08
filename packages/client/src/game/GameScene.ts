@@ -76,6 +76,11 @@ export class GameScene extends Phaser.Scene {
     xp: 0,
     xpToNext: 10,
     alive: true,
+    gold: 0,
+    strength: 0,
+    defense: 0,
+    statuses: [],
+    inventory: [],
   };
 
   private mapGfx!: Phaser.GameObjects.Graphics;

@@ -18,13 +18,29 @@ import {
   moveCostTicks,
   rollMobCount,
   rollMobKind,
+  ARMORS,
+  displayLabel,
+  itemCategory,
+  rollAppearances,
+  rollFloorLoot,
+  rollFloorLootCount,
+  rollMobDrop,
+  rollTreasureGold,
+  TREASURE_BONUS_ITEMS,
   xpToNextLevel,
+  type ArmorId,
   type GameEvent,
+  type InventoryEntry,
+  type ItemId,
+  type ItemInstance,
   type Level,
+  type LootRoll,
   type MobKind,
   type MobMind,
+  type RunAppearances,
   type Vec2,
   type VisibleActor,
+  type VisibleItem,
   type VisionMessage,
   type YouState,
 } from "@shattered-dominion/shared";
@@ -50,6 +66,14 @@ export interface PlayerActor extends ActorBase {
   alive: boolean;
   level: number;
   xp: number;
+  gold: number;
+  /** pontos de Força (poções): +1 de dano corpo a corpo por ponto. */
+  strength: number;
+  /** tipos de poção/pergaminho que ESTE jogador já identificou. */
+  identified: Set<ItemId>;
+  inventory: ItemInstance[];
+  equippedWeapon: string | null;
+  equippedArmor: string | null;
   /** buffer de 1 slot — a última intenção recebida vence. */
   intent: Vec2 | null;
   /** memória do mapa: índices de tiles já descobertos por ESTE jogador. */
@@ -57,6 +81,13 @@ export interface PlayerActor extends ActorBase {
   /** última visão enviada (sem o tick) para deduplicar mensagens. */
   lastVisionKey: string;
 }
+
+/** Item ou pilha de ouro no chão — no máximo um por tile. */
+type FloorEntity =
+  | { uid: string; x: number; y: number; kind: "item"; item: ItemInstance }
+  | { uid: string; x: number; y: number; kind: "gold"; amount: number };
+
+const NO_IDENTIFICATION: ReadonlySet<ItemId> = new Set();
 
 export interface MobActor extends ActorBase {
   kind: MobKind;
@@ -84,18 +115,25 @@ export class Match {
   private readonly occupancy = new Map<number, string>();
   private mobCap = 0;
   private mobSeq = 0;
+  private itemSeq = 0;
+  readonly appearances: RunAppearances;
+  private readonly floorEntities = new Map<string, FloorEntity>();
+  /** índice do tile → uid do FloorEntity (um por tile). */
+  private readonly itemsByTile = new Map<number, string>();
   /** eventos gerados neste tick — distribuídos e limpos em collectVisions. */
   private pendingEvents: GameEvent[] = [];
 
   constructor(level: Level) {
     this.level = level;
     this.rng = new Rng(level.seed).fork("match");
+    this.appearances = rollAppearances(new Rng(level.seed).fork("appearances"));
   }
 
-  /** Produção: gera o andar e povoa os mobs. */
+  /** Produção: gera o andar e povoa mobs e loot. */
   static fromSeed(seed: number, depth = 1): Match {
     const match = new Match(generateLevel(seed, depth));
     match.populateMobs();
+    match.populateLoot();
     return match;
   }
 
@@ -126,6 +164,12 @@ export class Match {
       alive: true,
       level: 1,
       xp: 0,
+      gold: 0,
+      strength: 0,
+      identified: new Set(),
+      inventory: [],
+      equippedWeapon: null,
+      equippedArmor: null,
       intent: null,
       discovered: new Set(),
       lastVisionKey: "",
@@ -214,6 +258,100 @@ export class Match {
       if (!isPlayer(a)) out.set(a.id, { x: a.x, y: a.y });
     }
     return out;
+  }
+
+  // ── loot ───────────────────────────────────────────────────────────
+
+  /** 3–6 itens/ouro em salas comuns + bônus nas salas de tesouro. */
+  populateLoot(): void {
+    const rooms = this.level.rooms.filter((r) => r.type !== RoomType.Entrance);
+    if (rooms.length === 0) return;
+
+    const count = rollFloorLootCount(this.rng);
+    for (let i = 0; i < count; i++) {
+      this.placeLootInRoom(this.rng.pick(rooms), rollFloorLoot(this.rng, this.level.depth));
+    }
+    for (const room of this.level.rooms) {
+      if (room.type !== RoomType.Treasure) continue;
+      for (let i = 0; i < TREASURE_BONUS_ITEMS; i++) {
+        this.placeLootInRoom(room, rollFloorLoot(this.rng, this.level.depth));
+      }
+      this.placeLootInRoom(room, {
+        kind: "gold",
+        amount: rollTreasureGold(this.rng, this.level.depth),
+      });
+    }
+  }
+
+  get floorItemCount(): number {
+    return this.floorEntities.size;
+  }
+
+  floorEntitiesForTest(): FloorEntity[] {
+    return [...this.floorEntities.values()];
+  }
+
+  private placeLootInRoom(
+    room: { x: number; y: number; width: number; height: number },
+    roll: LootRoll,
+  ): void {
+    for (let attempt = 0; attempt < 30; attempt++) {
+      const x = this.rng.nextInt(room.x, room.x + room.width - 1);
+      const y = this.rng.nextInt(room.y, room.y + room.height - 1);
+      if (this.placeLootAt(x, y, roll)) return;
+    }
+  }
+
+  /** Coloca loot no tile se for spawnável e não houver outro item ali. */
+  placeLootAt(x: number, y: number, roll: LootRoll): boolean {
+    const i = this.level.grid.index(x, y);
+    if (this.itemsByTile.has(i) || !SPAWNABLE.has(this.level.grid.tiles[i])) return false;
+
+    const uid = `item-${++this.itemSeq}`;
+    const entity: FloorEntity =
+      roll.kind === "gold"
+        ? { uid, x, y, kind: "gold", amount: roll.amount }
+        : { uid, x, y, kind: "item", item: { uid, itemId: roll.itemId, upgrade: roll.upgrade } };
+    this.floorEntities.set(uid, entity);
+    this.itemsByTile.set(i, uid);
+    return true;
+  }
+
+  private removeFloorEntity(entity: FloorEntity): void {
+    this.floorEntities.delete(entity.uid);
+    this.itemsByTile.delete(this.level.grid.index(entity.x, entity.y));
+  }
+
+  /** Rótulo público (seguro): nunca revela tipo de poção/pergaminho. */
+  private safeLabel(item: ItemInstance): string {
+    return displayLabel(item.itemId, item.upgrade, NO_IDENTIFICATION, this.appearances);
+  }
+
+  /** Pega tudo que estiver no tile do jogador (ouro sempre; item se couber). */
+  private autoPickup(player: PlayerActor): void {
+    const i = this.level.grid.index(player.x, player.y);
+    const uid = this.itemsByTile.get(i);
+    if (!uid) return;
+    const entity = this.floorEntities.get(uid);
+    if (!entity) return;
+
+    if (entity.kind === "gold") {
+      player.gold += entity.amount;
+      this.removeFloorEntity(entity);
+      this.info(player, `${player.name} pegou ${entity.amount} de ouro`);
+      return;
+    }
+    if (player.inventory.length >= 16) {
+      this.info(player, `inventário cheio — ${this.safeLabel(entity.item)} ficou no chão`);
+      return;
+    }
+    player.inventory.push(entity.item);
+    this.removeFloorEntity(entity);
+    this.info(player, `${player.name} pegou ${this.safeLabel(entity.item)}`);
+  }
+
+  private info(actor: Actor, text: string): void {
+    this.pendingEvents.push({ type: "info", actorId: actor.id, text, x: actor.x, y: actor.y });
   }
 
   private trySpawnRandomMob(): boolean {
@@ -367,6 +505,10 @@ export class Match {
 
     this.actors.delete(victim.id);
     if (isPlayer(killer)) this.awardXp(killer, MOB_DEFS[victim.kind].xpReward);
+
+    // drop da espécie no tile onde caiu
+    const drop = rollMobDrop(this.rng, victim.kind as MobKind);
+    if (drop) this.placeLootAt(victim.x, victim.y, drop);
   }
 
   /** Rota de dano direta para preparar cenários de morte em testes. */
@@ -453,14 +595,13 @@ export class Match {
     actor.y += dir.y;
     actor.nextActionAt = this.tick + moveCostTicks(actor.speed);
 
-    // "usar" a escada de descida = pisar nela; revive os mortos do grupo
-    // (a descida real de andar chega na sprint 07)
-    if (
-      isPlayer(actor) &&
-      actor.x === this.level.stairsDown.x &&
-      actor.y === this.level.stairsDown.y
-    ) {
-      this.reviveDeadPlayers();
+    if (isPlayer(actor)) {
+      this.autoPickup(actor);
+      // "usar" a escada de descida = pisar nela; revive os mortos do grupo
+      // (a descida real de andar chega na sprint 07)
+      if (actor.x === this.level.stairsDown.x && actor.y === this.level.stairsDown.y) {
+        this.reviveDeadPlayers();
+      }
     }
     return true;
   }
@@ -486,7 +627,7 @@ export class Match {
       if (!isPlayer(actor)) continue;
       const fov = actor.alive ? livingFovs.get(actor.id)! : groupFov;
       const message = this.buildVision(actor, fov);
-      const key = JSON.stringify([message.you, message.visible, message.actors]);
+      const key = JSON.stringify([message.you, message.visible, message.actors, message.items]);
       if (
         key !== actor.lastVisionKey ||
         message.discovered.length > 0 ||
@@ -529,6 +670,39 @@ export class Match {
       }
     }
 
+    const itemsInView: VisibleItem[] = [];
+    for (const entity of this.floorEntities.values()) {
+      if (!fov.has(grid.index(entity.x, entity.y))) continue;
+      itemsInView.push({
+        id: entity.uid,
+        x: entity.x,
+        y: entity.y,
+        category: entity.kind === "gold" ? "gold" : itemCategory(entity.item.itemId),
+        label:
+          entity.kind === "gold"
+            ? `${entity.amount} moedas`
+            : displayLabel(
+                entity.item.itemId,
+                entity.item.upgrade,
+                player.identified,
+                this.appearances,
+              ),
+      });
+    }
+    itemsInView.sort((a, b) => a.id.localeCompare(b.id));
+
+    const inventory: InventoryEntry[] = player.inventory.map((item) => ({
+      uid: item.uid,
+      label: displayLabel(item.itemId, item.upgrade, player.identified, this.appearances),
+      category: itemCategory(item.itemId),
+      identified:
+        itemCategory(item.itemId) !== "potion" && itemCategory(item.itemId) !== "scroll"
+          ? true
+          : player.identified.has(item.itemId),
+      equipped: item.uid === player.equippedWeapon || item.uid === player.equippedArmor,
+      upgrade: item.upgrade,
+    }));
+
     const you: YouState = {
       x: player.x,
       y: player.y,
@@ -539,6 +713,11 @@ export class Match {
       xp: player.xp,
       xpToNext: xpToNextLevel(player.level),
       alive: player.alive,
+      gold: player.gold,
+      strength: player.strength,
+      defense: this.playerDefense(player),
+      statuses: [],
+      inventory,
     };
 
     // evento entra se a posição é visível OU se envolve o próprio jogador
@@ -554,7 +733,17 @@ export class Match {
       visible: [...fov].sort((a, b) => a - b),
       discovered: discovered.sort((a, b) => a[0] - b[0]),
       actors: actorsInView.sort((a, b) => a.id.localeCompare(b.id)),
+      items: itemsInView,
       events,
     };
+  }
+
+  /** Defesa efetiva do jogador (armadura equipada + melhoria). */
+  private playerDefense(player: PlayerActor): number {
+    if (!player.equippedArmor) return 0;
+    const item = player.inventory.find((i) => i.uid === player.equippedArmor);
+    if (!item) return 0;
+    const def = ARMORS[item.itemId as ArmorId];
+    return def ? def.defense + item.upgrade : 0;
   }
 }
