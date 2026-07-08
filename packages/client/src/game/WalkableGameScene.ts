@@ -33,6 +33,10 @@ export class WalkableGameScene extends GameScene {
   }
 
   protected override onVisionExtra(v: VisionMessage, newActorIds: string[]): void {
+    if (!v.you.alive) {
+      this.cancelarCaminho(); // morto não caminha
+      return;
+    }
     if (this.caminho.length === 0) return;
 
     // ator novo à vista (que não seja eu) interrompe a caminhada
@@ -50,6 +54,7 @@ export class WalkableGameScene extends GameScene {
   }
 
   private onClick(pointer: Phaser.Input.Pointer): void {
+    if (!this.you.alive) return; // espectador não anda
     const world = pointer.positionToCamera(this.cameras.main) as Phaser.Math.Vector2;
     const tx = Math.floor(world.x / TILE_PX);
     const ty = Math.floor(world.y / TILE_PX);

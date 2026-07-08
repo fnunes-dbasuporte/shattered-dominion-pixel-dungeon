@@ -3,9 +3,12 @@ import {
   Grid,
   TileType,
   hashSeed,
+  type ActorKind,
+  type GameEvent,
   type MatchStartedMessage,
   type VisibleActor,
   type VisionMessage,
+  type YouState,
 } from "@shattered-dominion/shared";
 import type { GameConnection } from "../net/connection.js";
 
@@ -34,11 +37,20 @@ const CORES_JOGADOR = [
   0xe8554d, 0x4da3e8, 0x5fce6b, 0xe8c04d, 0xb35de8, 0x4de8d3, 0xe88a4d, 0xdd6fb1,
 ];
 
+const CORES_MOB: Record<string, number> = {
+  rat: 0x8a7a66,
+  gnoll: 0x9aa14e,
+  crab: 0xc4573b,
+};
+
 /** Centro do tile em pixels de mundo. */
 export const tileToWorld = (tile: number) => tile * TILE_PX + TILE_PX / 2;
 
 interface ActorSprite {
   container: Phaser.GameObjects.Container;
+  rect: Phaser.GameObjects.Rectangle;
+  hpBar: Phaser.GameObjects.Graphics;
+  kind: ActorKind;
   x: number;
   y: number;
 }
@@ -54,10 +66,25 @@ export class GameScene extends Phaser.Scene {
   protected grid!: Grid;
   protected discovered = new Set<number>();
   private visibleNow = new Set<number>();
-  protected you = { x: 0, y: 0, nextActionAt: 0 };
+  protected you: YouState = {
+    x: 0,
+    y: 0,
+    nextActionAt: 0,
+    hp: 20,
+    maxHp: 20,
+    level: 1,
+    xp: 0,
+    xpToNext: 10,
+    alive: true,
+  };
 
   private mapGfx!: Phaser.GameObjects.Graphics;
-  private hud!: Phaser.GameObjects.Text;
+  private hudGfx!: Phaser.GameObjects.Graphics;
+  private hudText!: Phaser.GameObjects.Text;
+  private topText!: Phaser.GameObjects.Text;
+  private banner!: Phaser.GameObjects.Text;
+  private logText!: Phaser.GameObjects.Text;
+  private logLines: string[] = [];
   private atores = new Map<string, ActorSprite>();
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private lastSentAt = 0;
@@ -81,10 +108,47 @@ export class GameScene extends Phaser.Scene {
 
     this.mapGfx = this.add.graphics();
 
-    this.hud = this.add
+    this.topText = this.add
       .text(8, 8, "", { fontFamily: "monospace", fontSize: "12px", color: "#9a96ad" })
       .setScrollFactor(0)
       .setDepth(100);
+
+    this.hudGfx = this.add.graphics().setScrollFactor(0).setDepth(100);
+    this.hudText = this.add
+      .text(12, 0, "", { fontFamily: "monospace", fontSize: "12px", color: "#e8e6f0" })
+      .setScrollFactor(0)
+      .setDepth(101);
+
+    this.logText = this.add
+      .text(0, 0, "", {
+        fontFamily: "monospace",
+        fontSize: "11px",
+        color: "#9a96ad",
+        align: "right",
+      })
+      .setOrigin(1, 1)
+      .setScrollFactor(0)
+      .setDepth(100);
+
+    this.banner = this.add
+      .text(
+        0,
+        60,
+        "VOCÊ MORREU — modo espectador\n(setas movem a câmera; um aliado na escada ▼ te revive)",
+        {
+          fontFamily: "monospace",
+          fontSize: "14px",
+          color: "#e8554d",
+          align: "center",
+        },
+      )
+      .setOrigin(0.5, 0)
+      .setScrollFactor(0)
+      .setDepth(102)
+      .setVisible(false);
+
+    this.reposicionarUi();
+    this.scale.on("resize", () => this.reposicionarUi());
 
     this.keys = this.input.keyboard!.addKeys("W,A,S,D,UP,DOWN,LEFT,RIGHT") as Record<
       string,
@@ -94,8 +158,27 @@ export class GameScene extends Phaser.Scene {
     this.conn.onVision((v) => this.onVision(v));
   }
 
+  private reposicionarUi(): void {
+    const cam = this.cameras.main;
+    this.hudGfx.setPosition(0, cam.height - 54);
+    this.hudText.setPosition(12, cam.height - 50);
+    this.logText.setPosition(cam.width - 10, cam.height - 10);
+    this.banner.setX(cam.width / 2);
+  }
+
   override update(time: number): void {
     const dir = this.readKeyboardDir();
+
+    if (!this.you.alive) {
+      // espectador: setas/WASD movem a câmera livremente
+      if (dir) {
+        this.cameras.main.stopFollow();
+        this.cameras.main.scrollX += dir.x * 6;
+        this.cameras.main.scrollY += dir.y * 6;
+      }
+      return;
+    }
+
     if (dir) {
       this.onManualInput();
       const key = `${dir.x},${dir.y}`;
@@ -132,8 +215,11 @@ export class GameScene extends Phaser.Scene {
     this.you = v.you;
 
     this.redrawMap();
-    const newActorIds = this.syncActors(v.actors);
-    this.updateHud(v.actors.length);
+    const dyingIds = this.processEvents(v.events);
+    const newActorIds = this.syncActors(v.actors, dyingIds);
+    this.drawHud();
+    this.banner.setVisible(!v.you.alive);
+    this.updateTopBar(v.actors.length);
     this.onVisionExtra(v, newActorIds);
   }
 
@@ -156,12 +242,96 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  /** Retorna os ids de atores que APARECERAM nesta visão (para o cancelamento do T7). */
-  private syncActors(actors: VisibleActor[]): string[] {
+  // ── eventos de combate ───────────────────────────────────────────────
+
+  /** Processa eventos (números, flashes, log) e retorna ids que morreram. */
+  private processEvents(events: GameEvent[]): Set<string> {
+    const dying = new Set<string>();
+    for (const e of events) {
+      switch (e.type) {
+        case "hit": {
+          const paraMim = e.targetId === this.conn.sessionId;
+          this.floatingText(e.x, e.y, `-${e.damage}`, paraMim ? "#e8554d" : "#e8c04d");
+          this.flashActor(e.targetId);
+          this.pushLog(`${e.attackerName} acertou ${e.targetName} (${e.damage})`);
+          break;
+        }
+        case "miss":
+          this.floatingText(e.x, e.y, "errou", "#9a96ad");
+          this.pushLog(`${e.attackerName} errou ${e.targetName}`);
+          break;
+        case "death":
+          dying.add(e.actorId);
+          this.floatingText(e.x, e.y, "✝", "#e8554d");
+          this.pushLog(e.actorId === this.conn.sessionId ? "VOCÊ morreu!" : `${e.name} morreu`);
+          break;
+        case "levelup":
+          this.floatingText(e.x, e.y, `Nível ${e.level}!`, "#5fce6b");
+          this.pushLog(`${e.name} subiu para o nível ${e.level}`);
+          break;
+        case "revive":
+          this.floatingText(e.x, e.y, "reviveu!", "#4da3e8");
+          this.pushLog(`${e.name} reviveu`);
+          break;
+      }
+    }
+    return dying;
+  }
+
+  private floatingText(tileX: number, tileY: number, texto: string, cor: string): void {
+    const t = this.add
+      .text(tileToWorld(tileX), tileToWorld(tileY) - 10, texto, {
+        fontFamily: "monospace",
+        fontSize: "12px",
+        color: cor,
+        stroke: "#0b0a10",
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5)
+      .setDepth(50);
+    this.tweens.add({
+      targets: t,
+      y: t.y - 18,
+      alpha: 0,
+      duration: 900,
+      ease: "Cubic.easeOut",
+      onComplete: () => t.destroy(),
+    });
+  }
+
+  private flashActor(id: string): void {
+    const sprite = this.atores.get(id);
+    if (!sprite) return;
+    sprite.rect.setFillStyle(0xffffff);
+    this.time.delayedCall(90, () => {
+      if (sprite.container.active) sprite.rect.setFillStyle(this.actorColor(id, sprite.kind));
+    });
+  }
+
+  private pushLog(linha: string): void {
+    this.logLines.push(linha);
+    if (this.logLines.length > 6) this.logLines.shift();
+    this.logText.setText(this.logLines.join("\n"));
+  }
+
+  // ── atores ───────────────────────────────────────────────────────────
+
+  /** Retorna os ids de atores que APARECERAM nesta visão. */
+  private syncActors(actors: VisibleActor[], dyingIds: Set<string>): string[] {
     const present = new Set(actors.map((a) => a.id));
     for (const [id, sprite] of this.atores) {
       if (!present.has(id)) {
-        sprite.container.destroy();
+        if (dyingIds.has(id)) {
+          // morte: fade antes de sumir
+          this.tweens.add({
+            targets: sprite.container,
+            alpha: 0,
+            duration: 350,
+            onComplete: () => sprite.container.destroy(),
+          });
+        } else {
+          sprite.container.destroy(); // saiu do FOV: some imediatamente
+        }
         this.atores.delete(id);
       }
     }
@@ -184,38 +354,84 @@ export class GameScene extends Phaser.Scene {
           ease: "Linear",
         });
       }
+      this.drawMiniHpBar(sprite, actor);
     }
     return appeared;
   }
 
+  private actorColor(id: string, kind: ActorKind): number {
+    if (kind === "player") return CORES_JOGADOR[hashSeed(id) % CORES_JOGADOR.length];
+    return CORES_MOB[kind] ?? 0xffffff;
+  }
+
   private createActorSprite(actor: VisibleActor): ActorSprite {
     const souEu = actor.id === this.conn.sessionId;
-    const cor = CORES_JOGADOR[hashSeed(actor.id) % CORES_JOGADOR.length];
+    const ehMob = actor.kind !== "player";
+    const cor = this.actorColor(actor.id, actor.kind);
 
-    const rect = this.add.rectangle(0, 0, TILE_PX - 8, TILE_PX - 8, cor);
+    const tamanho = ehMob ? TILE_PX - 12 : TILE_PX - 8;
+    const rect = this.add.rectangle(0, 0, tamanho, tamanho, cor);
     if (souEu) rect.setStrokeStyle(2, 0xffffff);
+
     const label = this.add
-      .text(0, -TILE_PX + 6, actor.name, {
+      .text(0, -TILE_PX + 6, actor.asleep ? `${actor.name} 💤` : actor.name, {
         fontFamily: "monospace",
         fontSize: "9px",
-        color: souEu ? "#ffffff" : "#c9c5da",
+        color: souEu ? "#ffffff" : ehMob ? "#c98a7a" : "#c9c5da",
       })
       .setOrigin(0.5, 0);
 
+    const hpBar = this.add.graphics();
+
     const container = this.add
-      .container(tileToWorld(actor.x), tileToWorld(actor.y), [rect, label])
+      .container(tileToWorld(actor.x), tileToWorld(actor.y), [rect, label, hpBar])
       .setDepth(10);
 
     if (souEu) {
       this.cameras.main.startFollow(container, true, 0.12, 0.12);
     }
-    return { container, x: actor.x, y: actor.y };
+    return { container, rect, hpBar, kind: actor.kind, x: actor.x, y: actor.y };
   }
 
-  private updateHud(visiveis: number): void {
+  /** Mini-barra sobre atores feridos (some quando o HP está cheio). */
+  private drawMiniHpBar(sprite: ActorSprite, actor: VisibleActor): void {
+    const g = sprite.hpBar;
+    g.clear();
+    if (actor.hp >= actor.maxHp) return;
+    const w = 20;
+    const frac = actor.hp / actor.maxHp;
+    g.fillStyle(0x0b0a10, 0.8);
+    g.fillRect(-w / 2, -TILE_PX / 2 - 4, w, 3);
+    g.fillStyle(frac > 0.5 ? 0x5fce6b : frac > 0.25 ? 0xe8c04d : 0xe8554d);
+    g.fillRect(-w / 2, -TILE_PX / 2 - 4, w * frac, 3);
+  }
+
+  // ── HUD ──────────────────────────────────────────────────────────────
+
+  private drawHud(): void {
+    const g = this.hudGfx;
+    const { hp, maxHp, xp, xpToNext, level } = this.you;
+    g.clear();
+    // fundo
+    g.fillStyle(0x0b0a10, 0.75);
+    g.fillRect(8, 0, 200, 46);
+    // HP
+    const hpFrac = Math.max(0, hp / maxHp);
+    g.fillStyle(0x2c2740);
+    g.fillRect(12, 18, 180, 10);
+    g.fillStyle(hpFrac > 0.5 ? 0x5fce6b : hpFrac > 0.25 ? 0xe8c04d : 0xe8554d);
+    g.fillRect(12, 18, 180 * hpFrac, 10);
+    // XP
+    g.fillStyle(0x2c2740);
+    g.fillRect(12, 34, 180, 4);
+    g.fillStyle(0xe8c04d);
+    g.fillRect(12, 34, 180 * Math.min(1, xp / xpToNext), 4);
+
+    this.hudText.setText(`HP ${hp}/${maxHp} · Nv ${level}`);
+  }
+
+  private updateTopBar(visiveis: number): void {
     const total = (this.conn.room.state as { players?: { size?: number } }).players?.size ?? "?";
-    this.hud.setText(
-      `sala ${this.conn.roomCode} · ${total} no grupo · ${visiveis} à vista · WASD/setas move · clique caminha`,
-    );
+    this.topText.setText(`sala ${this.conn.roomCode} · ${total} no grupo · ${visiveis} à vista`);
   }
 }

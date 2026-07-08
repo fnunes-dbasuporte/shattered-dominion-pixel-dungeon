@@ -324,7 +324,9 @@ export class Match {
       this.pendingEvents.push({
         type: "miss",
         attackerId: attacker.id,
+        attackerName: attacker.name,
         targetId: defender.id,
+        targetName: defender.name,
         x: defender.x,
         y: defender.y,
       });
@@ -335,7 +337,9 @@ export class Match {
     this.pendingEvents.push({
       type: "hit",
       attackerId: attacker.id,
+      attackerName: attacker.name,
       targetId: defender.id,
+      targetName: defender.name,
       x: defender.x,
       y: defender.y,
       damage: result.damage,

@@ -57,8 +57,25 @@ export interface YouState {
 
 /** Eventos de combate/progressão — cada jogador só recebe os que enxerga. */
 export type GameEvent =
-  | { type: "hit"; attackerId: string; targetId: string; x: number; y: number; damage: number }
-  | { type: "miss"; attackerId: string; targetId: string; x: number; y: number }
+  | {
+      type: "hit";
+      attackerId: string;
+      attackerName: string;
+      targetId: string;
+      targetName: string;
+      x: number;
+      y: number;
+      damage: number;
+    }
+  | {
+      type: "miss";
+      attackerId: string;
+      attackerName: string;
+      targetId: string;
+      targetName: string;
+      x: number;
+      y: number;
+    }
   | { type: "death"; actorId: string; name: string; x: number; y: number }
   | { type: "levelup"; actorId: string; name: string; level: number; x: number; y: number }
   | { type: "revive"; actorId: string; name: string; x: number; y: number };
