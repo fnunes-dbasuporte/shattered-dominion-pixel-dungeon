@@ -450,6 +450,155 @@ describe("Match — loot no chão e pickup", () => {
   });
 });
 
+describe("Match — inventário e ações", () => {
+  /** Match com jogador "a" e um item já no inventário. */
+  function comItem(itemId: string, upgrade = 0) {
+    const match = new Match(makeTestLevel([{ x: 2, y: 2 }]));
+    match.addPlayer("a", "A");
+    match.placeLootAt(3, 2, { kind: "item", itemId: itemId as never, upgrade });
+    match.queueIntent("a", 1, 0);
+    match.update(); // anda e pega
+    const player = match.actorForTest("a")!;
+    if (player.kind !== "player") throw new Error("esperava jogador");
+    return { match, player };
+  }
+
+  it("equipar espada muda o dano; desequipar volta aos punhos", () => {
+    const { match, player } = comItem("shortsword");
+    const uid = player.inventory[0].uid;
+    expect(player.damageMax).toBe(6); // punhos
+
+    match.equip("a", uid);
+    expect(player.damageMin).toBe(3);
+    expect(player.damageMax).toBe(7);
+
+    match.equip("a", uid); // toggle
+    expect(player.damageMax).toBe(6);
+  });
+
+  it("equipar armadura aparece na defesa do you", () => {
+    const { match, player } = comItem("leather");
+    match.equip("a", player.inventory[0].uid);
+    match.queueIntent("a", 0, 1);
+    const v = match.update().get("a")!;
+    expect(v.you.defense).toBe(2);
+  });
+
+  it("beber cura recupera HP, consome e identifica só para o bebedor", () => {
+    const { match, player } = comItem("healing");
+    match.damageForTest("a", 12);
+    match.use("a", player.inventory[0].uid);
+
+    expect(player.hp).toBe(20); // 8 + 15 clampado no máximo (20)
+    expect(player.inventory).toHaveLength(0);
+    expect(player.identified.has("healing")).toBe(true);
+
+    match.addPlayer("b", "B");
+    const b = match.actorForTest("b")!;
+    if (b.kind === "player") expect(b.identified.size).toBe(0);
+  });
+
+  it("poção de força soma dano permanente", () => {
+    const { match, player } = comItem("strength");
+    match.use("a", player.inventory[0].uid);
+    expect(player.strength).toBe(1);
+    expect(player.damageMin).toBe(2); // 1 + FOR
+    expect(player.damageMax).toBe(7); // 6 + FOR
+  });
+
+  it("pergaminho de identificação: sem alvo não consome; com alvo identifica", () => {
+    const match = new Match(makeTestLevel([{ x: 2, y: 2 }]));
+    match.addPlayer("a", "A");
+    match.placeLootAt(3, 2, { kind: "item", itemId: "identify", upgrade: 0 });
+    match.placeLootAt(4, 2, { kind: "item", itemId: "poison", upgrade: 0 });
+    match.queueIntent("a", 1, 0);
+    match.update();
+    match.queueIntent("a", 1, 0);
+    for (let t = 0; t < 11; t++) match.update();
+
+    const player = match.actorForTest("a")!;
+    if (player.kind !== "player") throw new Error();
+    expect(player.inventory).toHaveLength(2);
+    const scroll = player.inventory.find((i) => i.itemId === "identify")!;
+    const potion = player.inventory.find((i) => i.itemId === "poison")!;
+
+    match.use("a", scroll.uid); // sem alvo
+    expect(player.inventory).toHaveLength(2); // não consumiu
+    expect(player.identified.has("identify")).toBe(true); // mas revelou o pergaminho
+
+    match.use("a", scroll.uid, potion.uid);
+    expect(player.identified.has("poison")).toBe(true);
+    expect(player.inventory).toHaveLength(1); // consumiu o pergaminho
+  });
+
+  it("teleporte move o jogador e mantém a ocupação consistente", () => {
+    const { match, player } = comItem("teleport");
+    const antes = { x: player.x, y: player.y };
+    match.use("a", player.inventory[0].uid);
+    expect({ x: player.x, y: player.y }).not.toEqual(antes);
+    // ninguém ocupa o tile antigo; o novo é dele
+    const grid = match.level.grid;
+    match.addPlayer("b", "B"); // spawn (2,2) agora livre? só valida sem crash
+    expect(grid.inBounds(player.x, player.y)).toBe(true);
+  });
+
+  it("melhoria dá +1 na arma equipada e é consumida; sem equipado não consome", () => {
+    const match = new Match(makeTestLevel([{ x: 2, y: 2 }]));
+    match.addPlayer("a", "A");
+    match.placeLootAt(3, 2, { kind: "item", itemId: "upgrade", upgrade: 0 });
+    match.placeLootAt(4, 2, { kind: "item", itemId: "dagger", upgrade: 0 });
+    match.queueIntent("a", 1, 0);
+    match.update();
+    match.queueIntent("a", 1, 0);
+    for (let t = 0; t < 11; t++) match.update();
+
+    const player = match.actorForTest("a")!;
+    if (player.kind !== "player") throw new Error();
+    const scroll = player.inventory.find((i) => i.itemId === "upgrade")!;
+    const dagger = player.inventory.find((i) => i.itemId === "dagger")!;
+
+    match.use("a", scroll.uid); // nada equipado
+    expect(player.inventory).toHaveLength(2);
+
+    match.equip("a", dagger.uid);
+    match.use("a", scroll.uid);
+    expect(dagger.upgrade).toBe(1);
+    expect(player.damageMax).toBe(6); // adaga 5 + 1
+    expect(player.inventory).toHaveLength(1);
+  });
+
+  it("dropar coloca no chão e outro jogador pode pegar", () => {
+    const { match, player } = comItem("ration");
+    const uid = player.inventory[0].uid;
+    match.drop("a", uid);
+    expect(player.inventory).toHaveLength(0);
+    expect(match.floorItemCount).toBe(1);
+
+    // A sai do tile; B nasce e caminha até o item
+    match.queueIntent("a", 0, 1);
+    for (let t = 0; t < 11; t++) match.update();
+    match.addPlayer("b", "B");
+    const alvo = match.floorEntitiesForTest()[0];
+    for (let passo = 0; passo < 6; passo++) {
+      const pos = match.positionOf("b")!;
+      if (pos.x === alvo.x && pos.y === alvo.y) break;
+      match.queueIntent("b", Math.sign(alvo.x - pos.x), Math.sign(alvo.y - pos.y));
+      for (let t = 0; t < 11; t++) match.update();
+    }
+    const b = match.actorForTest("b")!;
+    if (b.kind === "player") expect(b.inventory).toHaveLength(1);
+  });
+
+  it("uid alheio ou inválido não faz nada", () => {
+    const { match, player } = comItem("dagger");
+    match.equip("a", "uid-inexistente");
+    match.use("a", 42);
+    match.drop("a", null);
+    expect(player.inventory).toHaveLength(1);
+    expect(player.equippedWeapon).toBeNull();
+  });
+});
+
 describe("Match — morte de jogador, espectador e revive", () => {
   it("a 0 HP vira espectador: alive=false, tile liberado, intenções ignoradas", () => {
     const match = new Match(

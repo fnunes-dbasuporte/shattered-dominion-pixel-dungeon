@@ -19,8 +19,14 @@ import {
   rollMobCount,
   rollMobKind,
   ARMORS,
+  FOOD_HEAL,
+  HEAL_POTION_AMOUNT,
+  WEAPONS,
+  applyArmor,
   displayLabel,
   itemCategory,
+  itemTrueName,
+  pickTeleportTarget,
   rollAppearances,
   rollFloorLoot,
   rollFloorLootCount,
@@ -37,8 +43,11 @@ import {
   type LootRoll,
   type MobKind,
   type MobMind,
+  type PotionId,
   type RunAppearances,
+  type ScrollId,
   type Vec2,
+  type WeaponId,
   type VisibleActor,
   type VisibleItem,
   type VisionMessage,
@@ -354,6 +363,186 @@ export class Match {
     this.pendingEvents.push({ type: "info", actorId: actor.id, text, x: actor.x, y: actor.y });
   }
 
+  // ── ações de inventário (validação total no servidor) ─────────────
+
+  private livingPlayer(id: string): PlayerActor | null {
+    const a = this.actors.get(id);
+    return a && isPlayer(a) && a.alive ? a : null;
+  }
+
+  /** Botão "pegar": mesmo efeito de pisar no tile. */
+  pickup(id: string): void {
+    const p = this.livingPlayer(id);
+    if (p) this.autoPickup(p);
+  }
+
+  equip(id: string, uid: unknown): void {
+    const p = this.livingPlayer(id);
+    if (!p || typeof uid !== "string") return;
+    const item = p.inventory.find((i) => i.uid === uid);
+    if (!item) return;
+
+    const cat = itemCategory(item.itemId);
+    if (cat === "weapon") {
+      p.equippedWeapon = p.equippedWeapon === uid ? null : uid;
+      this.info(
+        p,
+        `${p.name} ${p.equippedWeapon ? "empunhou" : "guardou"} ${this.safeLabel(item)}`,
+      );
+    } else if (cat === "armor") {
+      p.equippedArmor = p.equippedArmor === uid ? null : uid;
+      this.info(p, `${p.name} ${p.equippedArmor ? "vestiu" : "tirou"} ${this.safeLabel(item)}`);
+    } else {
+      return; // consumíveis não se equipam
+    }
+    this.applyEquipment(p);
+  }
+
+  use(id: string, uid: unknown, targetUid?: unknown): void {
+    const p = this.livingPlayer(id);
+    if (!p || typeof uid !== "string") return;
+    const item = p.inventory.find((i) => i.uid === uid);
+    if (!item) return;
+
+    const cat = itemCategory(item.itemId);
+    if (cat === "food") {
+      p.hp = Math.min(p.maxHp, p.hp + FOOD_HEAL);
+      this.consume(p, item);
+      this.info(p, `${p.name} comeu ${itemTrueName(item.itemId)} (+${FOOD_HEAL} HP)`);
+    } else if (cat === "potion") {
+      this.drinkPotion(p, item);
+    } else if (cat === "scroll") {
+      this.readScroll(p, item, targetUid);
+    }
+  }
+
+  drop(id: string, uid: unknown): void {
+    const p = this.livingPlayer(id);
+    if (!p || typeof uid !== "string") return;
+    const index = p.inventory.findIndex((i) => i.uid === uid);
+    if (index < 0) return;
+
+    const spot = this.findItemDropTile(p);
+    if (!spot) {
+      this.info(p, "não há espaço no chão para largar");
+      return;
+    }
+    const [item] = p.inventory.splice(index, 1);
+    if (p.equippedWeapon === uid) p.equippedWeapon = null;
+    if (p.equippedArmor === uid) p.equippedArmor = null;
+    this.applyEquipment(p);
+
+    this.floorEntities.set(item.uid, { uid: item.uid, x: spot.x, y: spot.y, kind: "item", item });
+    this.itemsByTile.set(this.level.grid.index(spot.x, spot.y), item.uid);
+    this.info(p, `${p.name} largou ${this.safeLabel(item)}`);
+  }
+
+  private consume(p: PlayerActor, item: ItemInstance): void {
+    p.inventory = p.inventory.filter((i) => i.uid !== item.uid);
+  }
+
+  /** Beber identifica o tipo para o bebedor; efeitos são públicos e seguros. */
+  private drinkPotion(p: PlayerActor, item: ItemInstance): void {
+    const potion = item.itemId as PotionId;
+    p.identified.add(potion);
+    this.consume(p, item);
+
+    if (potion === "healing") {
+      p.hp = Math.min(p.maxHp, p.hp + HEAL_POTION_AMOUNT);
+      this.info(p, `${p.name} bebeu uma poção e parece revigorado`);
+    } else if (potion === "strength") {
+      p.strength += 1;
+      this.applyEquipment(p);
+      this.info(p, `${p.name} bebeu uma poção e parece mais forte (FOR +1)`);
+    } else {
+      this.applyPoison(p);
+      this.info(p, `${p.name} bebeu uma poção e ficou pálido... veneno!`);
+    }
+  }
+
+  private readScroll(p: PlayerActor, item: ItemInstance, targetUid: unknown): void {
+    const scroll = item.itemId as ScrollId;
+    p.identified.add(scroll); // ler revela o que o pergaminho é
+
+    if (scroll === "identify") {
+      const alvo =
+        typeof targetUid === "string" ? p.inventory.find((i) => i.uid === targetUid) : undefined;
+      const precisa =
+        alvo &&
+        (itemCategory(alvo.itemId) === "potion" || itemCategory(alvo.itemId) === "scroll") &&
+        !p.identified.has(alvo.itemId);
+      if (!precisa) {
+        // não consome: o cliente pede o alvo e reenvia
+        this.info(p, "escolha um item ainda não identificado");
+        return;
+      }
+      p.identified.add(alvo.itemId);
+      this.consume(p, item);
+      this.info(p, `${p.name} leu um pergaminho e identificou um item`);
+    } else if (scroll === "teleport") {
+      this.consume(p, item);
+      const destino = pickTeleportTarget(this.level.grid, this.rng, (x, y) => {
+        return !this.occupancy.has(this.level.grid.index(x, y));
+      });
+      if (destino) {
+        this.occupancy.delete(this.level.grid.index(p.x, p.y));
+        p.x = destino.x;
+        p.y = destino.y;
+        this.occupancy.set(this.level.grid.index(p.x, p.y), p.id);
+        this.info(p, `${p.name} desapareceu num clarão!`);
+        this.autoPickup(p);
+      }
+    } else {
+      // melhoria: arma equipada tem prioridade; senão armadura
+      const alvoUid = p.equippedWeapon ?? p.equippedArmor;
+      const alvo = alvoUid ? p.inventory.find((i) => i.uid === alvoUid) : undefined;
+      if (!alvo) {
+        this.info(p, "nada equipado para melhorar");
+        return; // não consome
+      }
+      alvo.upgrade += 1;
+      this.applyEquipment(p);
+      this.consume(p, item);
+      this.info(p, `${p.name} fez ${this.safeLabel(alvo)} brilhar`);
+    }
+  }
+
+  /** Veneno é implementado na tarefa de efeitos em runtime. */
+  protected applyPoison(_p: PlayerActor): void {}
+
+  /** Recalcula os stats efetivos (nível + arma + força). */
+  private applyEquipment(p: PlayerActor): void {
+    const stats = heroStats(p.level);
+    const weapon = p.equippedWeapon
+      ? p.inventory.find((i) => i.uid === p.equippedWeapon)
+      : undefined;
+    const wdef = weapon ? WEAPONS[weapon.itemId as WeaponId] : undefined;
+
+    p.accuracy = stats.accuracy + (wdef?.accuracyMod ?? 0);
+    p.evasion = stats.evasion;
+    p.damageMin = (wdef && weapon ? wdef.damageMin + weapon.upgrade : stats.damageMin) + p.strength;
+    p.damageMax = (wdef && weapon ? wdef.damageMax + weapon.upgrade : stats.damageMax) + p.strength;
+  }
+
+  /** BFS por um tile passável sem item para receber um drop. */
+  private findItemDropTile(origin: Vec2): Vec2 | null {
+    const grid = this.level.grid;
+    const visited = new Set<number>([grid.index(origin.x, origin.y)]);
+    const queue: Vec2[] = [origin];
+    while (queue.length > 0) {
+      const current = queue.shift() as Vec2;
+      const i = grid.index(current.x, current.y);
+      if (!this.itemsByTile.has(i) && SPAWNABLE.has(grid.tiles[i])) return current;
+      for (const n of grid.neighbors4(current.x, current.y)) {
+        const ni = grid.index(n.x, n.y);
+        if (visited.has(ni)) continue;
+        visited.add(ni);
+        if (grid.tiles[ni] !== TileType.Wall) queue.push(n);
+      }
+    }
+    return null;
+  }
+
   private trySpawnRandomMob(): boolean {
     const rooms = this.level.rooms.filter((r) => r.type !== RoomType.Entrance);
     if (rooms.length === 0) return false;
@@ -471,7 +660,12 @@ export class Match {
       return;
     }
 
-    defender.hp = Math.max(0, defender.hp - result.damage);
+    // armadura bloqueia parte do dano (só jogadores têm armadura por ora)
+    const damage = isPlayer(defender)
+      ? applyArmor(this.rng, result.damage, this.playerDefense(defender))
+      : result.damage;
+
+    defender.hp = Math.max(0, defender.hp - damage);
     this.pendingEvents.push({
       type: "hit",
       attackerId: attacker.id,
@@ -480,7 +674,7 @@ export class Match {
       targetName: defender.name,
       x: defender.x,
       y: defender.y,
-      damage: result.damage,
+      damage,
     });
     if (defender.hp === 0) this.onZeroHp(defender, attacker);
   }

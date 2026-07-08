@@ -54,6 +54,22 @@ export class GameRoom extends Room {
       const p = (payload ?? {}) as { dx?: unknown; dy?: unknown };
       this.match.queueIntent(client.sessionId, p.dx, p.dy);
     });
+    this.onMessage(MessageType.Pickup, (client) => {
+      if (this.state.phase === "playing") this.match?.pickup(client.sessionId);
+    });
+    this.onMessage(MessageType.Equip, (client, payload: unknown) => {
+      if (this.state.phase !== "playing") return;
+      this.match?.equip(client.sessionId, (payload as { uid?: unknown })?.uid);
+    });
+    this.onMessage(MessageType.Use, (client, payload: unknown) => {
+      if (this.state.phase !== "playing") return;
+      const p = (payload ?? {}) as { uid?: unknown; targetUid?: unknown };
+      this.match?.use(client.sessionId, p.uid, p.targetUid);
+    });
+    this.onMessage(MessageType.Drop, (client, payload: unknown) => {
+      if (this.state.phase !== "playing") return;
+      this.match?.drop(client.sessionId, (payload as { uid?: unknown })?.uid);
+    });
 
     console.log(`[GameRoom ${this.roomId}] lobby criado`);
   }
