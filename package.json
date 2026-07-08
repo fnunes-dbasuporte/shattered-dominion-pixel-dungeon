@@ -1,0 +1,16 @@
+{
+  "name": "shattered-dominion-pixel-dungeon",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Roguelike multiplayer (até 8 jogadores) inspirado nas mecânicas do Pixel Dungeon (watabou). Cliente Phaser 4 + servidor autoritativo Colyseus.",
+  "license": "GPL-3.0-or-later",
+  "type": "module",
+  "engines": {
+    "node": ">=22"
+  },
+  "packageManager": "pnpm@11.9.0",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/fnunes-dbasuporte/shattered-dominion-pixel-dungeon.git"
+  }
+}

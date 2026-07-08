@@ -1,0 +1,8 @@
+{
+  "name": "@shattered-dominion/client",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Cliente Phaser 4 (renderização, input e interpolação — sem regra de jogo)",
+  "license": "GPL-3.0-or-later",
+  "type": "module"
+}

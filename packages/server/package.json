@@ -1,0 +1,8 @@
+{
+  "name": "@shattered-dominion/server",
+  "version": "0.1.0",
+  "private": true,
+  "description": "Servidor autoritativo (Node 22 + Colyseus)",
+  "license": "GPL-3.0-or-later",
+  "type": "module"
+}

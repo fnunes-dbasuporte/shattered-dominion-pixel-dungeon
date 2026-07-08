@@ -1,6 +1,9 @@
 # Dependências e build
 node_modules/
 dist/
+*.tsbuildinfo
+coverage/
+.vite/
 
 # Segredos
 .env
@@ -11,8 +14,9 @@ dist/
 INFRA-VM-*.md
 docs/infra/INFRA-VM-*.md
 
-# Documentos de planejamento e orientação — apenas locais, fora do repo público
+# Documentos de planejamento, orientação e testes manuais — apenas locais, fora do repo público
 PLANO-MESTRE.md
 CLAUDE.md
 prompts/
 relatorios/
+docs/testes/
