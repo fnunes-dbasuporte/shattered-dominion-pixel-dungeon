@@ -1,6 +1,16 @@
 import { afterAll, afterEach, beforeAll, describe, expect, it, vi } from "vitest";
 import { boot, type ColyseusTestServer } from "@colyseus/testing";
-import { MAX_PLAYERS, MessageType } from "@shattered-dominion/shared";
+import {
+  DIRECTIONS8,
+  FOV_RADIUS,
+  Grid,
+  MAX_PLAYERS,
+  MessageType,
+  TileType,
+  canStep,
+  type Vec2,
+  type VisionMessage,
+} from "@shattered-dominion/shared";
 import { createGameServer } from "../app.js";
 import type { GameRoom } from "./GameRoom.js";
 
@@ -130,5 +140,99 @@ describe("GameRoom — lobby, início de partida e visão", () => {
       expect(room.state.hostSessionId).toBe(c2.sessionId);
     });
     expect(room.state.players.size).toBe(1);
+  });
+
+  // ── movimento e visão pela rede (ticks manuais) ──────────────────────
+
+  /** Reconstrói o mapa conhecido a partir das descobertas (como o cliente fará). */
+  function knownGrid(visions: VisionMessage[]): { grid: Grid; discovered: Set<number> } {
+    const grid = new Grid(32, 32); // parede por padrão = desconhecido bloqueia
+    const discovered = new Set<number>();
+    for (const v of visions) {
+      for (const [i, t] of v.discovered) {
+        grid.tiles[i] = t;
+        discovered.add(i);
+      }
+    }
+    return { grid, discovered };
+  }
+
+  async function startSolo() {
+    const room = await createLobby();
+    const c1 = await colyseus.connectTo(room, { name: "Ana" });
+    const vision = c1.waitForMessage(MessageType.Vision);
+    c1.send(MessageType.Start);
+    await room.waitForMessage(MessageType.Start);
+    const v0: VisionMessage = await vision;
+    return { room, c1, v0 };
+  }
+
+  it("move válido avança 1 tile no tick e a visão reporta a nova posição", async () => {
+    const { room, c1, v0 } = await startSolo();
+    const { grid } = knownGrid([v0]);
+    const from: Vec2 = { x: v0.you.x, y: v0.you.y };
+    const dir = DIRECTIONS8.find((d) => canStep(grid, from, d));
+    expect(dir).toBeDefined();
+
+    const next = c1.waitForMessage(MessageType.Vision);
+    c1.send(MessageType.Move, { dx: dir!.x, dy: dir!.y });
+    await room.waitForMessage(MessageType.Move);
+    room.tickUpdate();
+
+    const v1: VisionMessage = await next;
+    expect(v1.you.x).toBe(from.x + dir!.x);
+    expect(v1.you.y).toBe(from.y + dir!.y);
+    expect(v1.you.nextActionAt).toBeGreaterThan(0);
+    // memória do mapa: nada é redescoberto
+    const antes = new Set(v0.discovered.map(([i]) => i));
+    for (const [i] of v1.discovered) expect(antes.has(i)).toBe(false);
+  });
+
+  it("move contra parede é rejeitado (posição só muda com o passo válido)", async () => {
+    const { room, c1, v0 } = await startSolo();
+    const { grid, discovered } = knownGrid([v0]);
+    const from: Vec2 = { x: v0.you.x, y: v0.you.y };
+
+    // direção cujo alvo é uma parede CONHECIDA
+    const wallDir = DIRECTIONS8.find((d) => {
+      const i = grid.index(from.x + d.x, from.y + d.y);
+      return discovered.has(i) && grid.tiles[i] === TileType.Wall;
+    });
+    const validDir = DIRECTIONS8.find((d) => canStep(grid, from, d));
+    expect(wallDir).toBeDefined();
+    expect(validDir).toBeDefined();
+
+    // 1º: intenção inválida — consumida sem efeito
+    c1.send(MessageType.Move, { dx: wallDir!.x, dy: wallDir!.y });
+    await room.waitForMessage(MessageType.Move);
+    room.tickUpdate();
+
+    // 2º: intenção válida — só ela desloca
+    const next = c1.waitForMessage(MessageType.Vision);
+    c1.send(MessageType.Move, { dx: validDir!.x, dy: validDir!.y });
+    await room.waitForMessage(MessageType.Move);
+    room.tickUpdate();
+
+    const v1: VisionMessage = await next;
+    expect(v1.you.x).toBe(from.x + validDir!.x);
+    expect(v1.you.y).toBe(from.y + validDir!.y);
+  });
+
+  it("visão nunca vaza tiles além do raio de FOV", async () => {
+    const { v0 } = await startSolo();
+    for (const i of v0.visible) {
+      const x = i % 32;
+      const y = Math.floor(i / 32);
+      const dist2 = (x - v0.you.x) ** 2 + (y - v0.you.y) ** 2;
+      expect(dist2).toBeLessThanOrEqual(FOV_RADIUS * FOV_RADIUS);
+    }
+  });
+
+  it("move antes do início da partida é ignorado sem crash", async () => {
+    const room = await createLobby();
+    const c1 = await colyseus.connectTo(room, { name: "Ana" });
+    c1.send(MessageType.Move, { dx: 1, dy: 0 });
+    await room.waitForMessage(MessageType.Move);
+    expect(room.state.phase).toBe("lobby");
   });
 });
