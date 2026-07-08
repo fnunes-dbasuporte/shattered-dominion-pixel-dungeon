@@ -4,6 +4,7 @@ dist/
 *.tsbuildinfo
 coverage/
 .vite/
+tools/viz/out*.html
 
 # Segredos
 .env
