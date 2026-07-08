@@ -4,5 +4,19 @@
   "private": true,
   "description": "Cliente Phaser 4 (renderização, input e interpolação — sem regra de jogo)",
   "license": "GPL-3.0-or-later",
-  "type": "module"
+  "type": "module",
+  "scripts": {
+    "dev": "vite",
+    "build": "tsc && vite build",
+    "preview": "vite preview"
+  },
+  "dependencies": {
+    "@colyseus/sdk": "^0.17.43",
+    "@shattered-dominion/shared": "workspace:*",
+    "phaser": "^4.2.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.9.3",
+    "vite": "^8.1.3"
+  }
 }
