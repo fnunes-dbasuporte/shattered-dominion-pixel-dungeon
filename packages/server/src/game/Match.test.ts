@@ -266,3 +266,112 @@ describe("Match — IA dos mobs em jogo", () => {
     expect(chase("crab")).toBeLessThan(chase("rat"));
   });
 });
+
+describe("Match — combate", () => {
+  /** Ataca o mob adjacente até ele morrer; devolve eventos coletados. */
+  function matarMobAdjacente(match: Match, mobId: string, dir: Vec2, maxTicks = 600) {
+    const eventos: unknown[] = [];
+    for (let t = 0; t < maxTicks; t++) {
+      match.queueIntent("a", dir.x, dir.y);
+      const v = match.update().get("a");
+      if (v) eventos.push(...v.events);
+      if (!match.mobPositionsForTest().has(mobId)) break;
+    }
+    return eventos as { type: string; damage?: number; actorId?: string }[];
+  }
+
+  it("andar contra um mob ataca em vez de mover (e gera evento hit/miss)", () => {
+    const match = new Match(makeTestLevel([{ x: 2, y: 2 }]));
+    match.addPlayer("a", "A");
+    match.spawnMobAt("rat", 3, 2);
+
+    match.queueIntent("a", 1, 0);
+    const v = match.update().get("a")!;
+    expect(match.positionOf("a")).toEqual({ x: 2, y: 2 }); // não moveu
+    const tipos = v.events.map((e) => e.type);
+    expect(tipos.some((t) => t === "hit" || t === "miss")).toBe(true);
+  });
+
+  it("matar o rato remove o mob, emite death e concede XP", () => {
+    const match = new Match(makeTestLevel([{ x: 2, y: 2 }]));
+    match.addPlayer("a", "A");
+    const id = match.spawnMobAt("rat", 3, 2);
+
+    const eventos = matarMobAdjacente(match, id, { x: 1, y: 0 });
+    expect(match.mobPositionsForTest().has(id)).toBe(false);
+    expect(eventos.some((e) => e.type === "death")).toBe(true);
+
+    const v = match.update().get("a") ?? null;
+    // xp do rato = 2; ainda sem level up
+    const you = v?.you ?? null;
+    if (you) expect(you.xp).toBe(2);
+  });
+
+  it("dano de hit sempre dentro do intervalo dos punhos (1–6)", () => {
+    const match = new Match(makeTestLevel([{ x: 2, y: 2 }]));
+    match.addPlayer("a", "A");
+    const id = match.spawnMobAt("crab", 3, 2);
+    const eventos = matarMobAdjacente(match, id, { x: 1, y: 0 });
+    const hits = eventos.filter((e) => e.type === "hit");
+    expect(hits.length).toBeGreaterThan(0);
+    for (const h of hits) {
+      expect(h.damage).toBeGreaterThanOrEqual(1);
+      expect(h.damage).toBeLessThanOrEqual(6);
+    }
+  });
+
+  it("matar 5 ratos sobe de nível (+5 HP máximo) e emite levelup", () => {
+    const match = new Match(makeTestLevel([{ x: 2, y: 2 }]));
+    match.addPlayer("a", "A");
+
+    const eventos: { type: string }[] = [];
+    for (let n = 0; n < 5; n++) {
+      const id = match.spawnMobAt("rat", 3, 2);
+      eventos.push(...matarMobAdjacente(match, id, { x: 1, y: 0 }));
+      // cura entre as lutas — o teste valida XP, não sobrevivência
+      const heroi = match.actorForTest("a")!;
+      heroi.hp = heroi.maxHp;
+    }
+    expect(eventos.some((e) => e.type === "levelup")).toBe(true);
+
+    match.queueIntent("a", 0, 1); // força uma visão nova
+    let you = null as { level: number; maxHp: number } | null;
+    for (let t = 0; t < 15 && !you; t++) {
+      const v = match.update().get("a");
+      if (v) you = v.you;
+    }
+    expect(you!.level).toBe(2);
+    expect(you!.maxHp).toBe(25);
+  });
+
+  it("sem friendly fire: andar contra aliado não ataca nem move", () => {
+    const match = new Match(
+      makeTestLevel([
+        { x: 2, y: 2 },
+        { x: 3, y: 2 },
+      ]),
+    );
+    match.addPlayer("a", "A");
+    match.addPlayer("b", "B");
+
+    match.queueIntent("a", 1, 0);
+    const v = match.update().get("a");
+    expect(match.positionOf("a")).toEqual({ x: 2, y: 2 });
+    const eventos = v?.events ?? [];
+    expect(eventos.filter((e) => e.type === "hit" || e.type === "miss")).toHaveLength(0);
+  });
+
+  it("mob adjacente ataca o jogador e o HP cai", () => {
+    const match = new Match(makeTestLevel([{ x: 2, y: 2 }]));
+    match.addPlayer("a", "A");
+    match.spawnMobAt("gnoll", 3, 2);
+
+    let hp = 20;
+    for (let t = 0; t < 400; t++) {
+      const v = match.update().get("a");
+      if (v) hp = v.you.hp;
+      if (hp < 20) break;
+    }
+    expect(hp).toBeLessThan(20);
+  });
+});

@@ -55,6 +55,14 @@ export interface YouState {
   alive: boolean;
 }
 
+/** Eventos de combate/progressão — cada jogador só recebe os que enxerga. */
+export type GameEvent =
+  | { type: "hit"; attackerId: string; targetId: string; x: number; y: number; damage: number }
+  | { type: "miss"; attackerId: string; targetId: string; x: number; y: number }
+  | { type: "death"; actorId: string; name: string; x: number; y: number }
+  | { type: "levelup"; actorId: string; name: string; level: number; x: number; y: number }
+  | { type: "revive"; actorId: string; name: string; x: number; y: number };
+
 export interface VisionMessage {
   tick: number;
   you: YouState;
@@ -64,6 +72,8 @@ export interface VisionMessage {
   discovered: [number, number][];
   /** atores dentro do FOV deste jogador (inclui o próprio). */
   actors: VisibleActor[];
+  /** eventos deste tick visíveis a este jogador (ou que o envolvem). */
+  events: GameEvent[];
 }
 
 export const HERO_SPEED = 1;

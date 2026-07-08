@@ -7,16 +7,19 @@ import {
   RoomType,
   TICKS_PER_TIME_UNIT,
   TileType,
+  attackRoll,
   canStep,
   computeFov,
   freshMind,
   generateLevel,
+  grantXp,
   heroStats,
   mobThink,
   moveCostTicks,
   rollMobCount,
   rollMobKind,
   xpToNextLevel,
+  type GameEvent,
   type Level,
   type MobKind,
   type MobMind,
@@ -81,6 +84,8 @@ export class Match {
   private readonly occupancy = new Map<number, string>();
   private mobCap = 0;
   private mobSeq = 0;
+  /** eventos gerados neste tick — distribuídos e limpos em collectVisions. */
+  private pendingEvents: GameEvent[] = [];
 
   constructor(level: Level) {
     this.level = level;
@@ -197,6 +202,11 @@ export class Match {
     return id;
   }
 
+  /** Acesso direto ao ator — apenas para preparação de cenários em testes. */
+  actorForTest(id: string): Actor | undefined {
+    return this.actors.get(id);
+  }
+
   /** Posições dos mobs — apenas para asserções em testes. */
   mobPositionsForTest(): Map<string, Vec2> {
     const out = new Map<string, Vec2>();
@@ -252,9 +262,25 @@ export class Match {
   }
 
   private actPlayer(actor: PlayerActor): void {
-    if (!actor.intent) return;
+    if (!actor.intent || !actor.alive) {
+      actor.intent = null;
+      return;
+    }
     const dir = actor.intent;
     actor.intent = null; // consome mesmo se inválida — sem feedback a cheats
+
+    if (!canStep(this.level.grid, actor, dir)) return;
+    const targetIndex = this.level.grid.index(actor.x + dir.x, actor.y + dir.y);
+    const occupantId = this.occupancy.get(targetIndex);
+    const occupant = occupantId ? this.actors.get(occupantId) : undefined;
+
+    // mover-se contra um mob = atacar (custo de 1 unidade de tempo)
+    if (occupant && !isPlayer(occupant)) {
+      this.resolveAttack(actor, occupant);
+      actor.nextActionAt = this.tick + TICKS_PER_TIME_UNIT;
+      return;
+    }
+    // sem friendly fire: tile com jogador só bloqueia
     this.tryMove(actor, dir);
   }
 
@@ -277,11 +303,83 @@ export class Match {
         mob.nextActionAt = this.tick + Match.IDLE_RETHINK_TICKS;
       }
     } else if (action.type === "attack") {
-      // resolução de dano chega na próxima tarefa — por ora só consome o turno
+      const target = this.actors.get(action.targetId);
+      // revalidação no servidor: alvo vivo e de fato adjacente
+      const adjacente =
+        target && Math.max(Math.abs(target.x - mob.x), Math.abs(target.y - mob.y)) === 1;
+      if (target && isPlayer(target) && target.alive && adjacente) {
+        this.resolveAttack(mob, target);
+      }
       mob.nextActionAt = this.tick + TICKS_PER_TIME_UNIT;
     } else {
       mob.nextActionAt = this.tick + Match.IDLE_RETHINK_TICKS;
     }
+  }
+
+  // ── combate ────────────────────────────────────────────────────────
+
+  private resolveAttack(attacker: Actor, defender: Actor): void {
+    const result = attackRoll(this.rng, attacker, defender);
+    if (!result.hit) {
+      this.pendingEvents.push({
+        type: "miss",
+        attackerId: attacker.id,
+        targetId: defender.id,
+        x: defender.x,
+        y: defender.y,
+      });
+      return;
+    }
+
+    defender.hp = Math.max(0, defender.hp - result.damage);
+    this.pendingEvents.push({
+      type: "hit",
+      attackerId: attacker.id,
+      targetId: defender.id,
+      x: defender.x,
+      y: defender.y,
+      damage: result.damage,
+    });
+    if (defender.hp === 0) this.onZeroHp(defender, attacker);
+  }
+
+  private onZeroHp(victim: Actor, killer: Actor): void {
+    if (isPlayer(victim)) {
+      // morte de jogador (espectador/revive) chega na próxima tarefa
+      return;
+    }
+
+    this.pendingEvents.push({
+      type: "death",
+      actorId: victim.id,
+      name: victim.name,
+      x: victim.x,
+      y: victim.y,
+    });
+    this.occupancy.delete(this.level.grid.index(victim.x, victim.y));
+    this.actors.delete(victim.id);
+
+    if (isPlayer(killer)) this.awardXp(killer, MOB_DEFS[victim.kind].xpReward);
+  }
+
+  private awardXp(player: PlayerActor, amount: number): void {
+    const ups = grantXp(player, amount);
+    if (ups === 0) return;
+    // aplica os novos stats; o aumento de HP máximo também cura o delta
+    const stats = heroStats(player.level);
+    const ganhoHp = stats.maxHp - player.maxHp;
+    player.maxHp = stats.maxHp;
+    player.hp = Math.min(player.maxHp, player.hp + ganhoHp);
+    player.accuracy = stats.accuracy;
+    player.evasion = stats.evasion;
+    this.pendingEvents.push({
+      type: "levelup",
+      actorId: player.id,
+      name: player.name,
+      level: player.level,
+      x: player.x,
+      y: player.y,
+    });
   }
 
   /** Passo validado + ocupação; cobra o custo de tempo se moveu. */
@@ -308,11 +406,16 @@ export class Match {
       if (!isPlayer(actor)) continue;
       const message = this.buildVision(actor);
       const key = JSON.stringify([message.you, message.visible, message.actors]);
-      if (key !== actor.lastVisionKey || message.discovered.length > 0) {
+      if (
+        key !== actor.lastVisionKey ||
+        message.discovered.length > 0 ||
+        message.events.length > 0
+      ) {
         actor.lastVisionKey = key;
         out.set(actor.id, message);
       }
     }
+    this.pendingEvents = [];
     return out;
   }
 
@@ -357,12 +460,20 @@ export class Match {
       alive: player.alive,
     };
 
+    // evento entra se a posição é visível OU se envolve o próprio jogador
+    const involves = (e: GameEvent) =>
+      ("attackerId" in e && e.attackerId === player.id) ||
+      ("targetId" in e && e.targetId === player.id) ||
+      ("actorId" in e && e.actorId === player.id);
+    const events = this.pendingEvents.filter((e) => involves(e) || fov.has(grid.index(e.x, e.y)));
+
     return {
       tick: this.tick,
       you,
       visible: [...fov].sort((a, b) => a - b),
       discovered: discovered.sort((a, b) => a[0] - b[0]),
       actors: actorsInView.sort((a, b) => a.id.localeCompare(b.id)),
+      events,
     };
   }
 }
