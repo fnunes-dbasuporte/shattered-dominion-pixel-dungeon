@@ -38,6 +38,8 @@ export interface VisibleActor {
   maxHp: number;
   /** duração do movimento em ticks — o cliente usa para interpolar. */
   moveTicks: number;
+  /** mobs dormindo ganham indicador visual; sempre false para jogadores. */
+  asleep: boolean;
 }
 
 /** Estado privado do próprio jogador — só ele recebe. */

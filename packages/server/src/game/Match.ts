@@ -5,17 +5,21 @@ import {
   MOB_RESPAWN_TICKS,
   Rng,
   RoomType,
+  TICKS_PER_TIME_UNIT,
   TileType,
   canStep,
   computeFov,
+  freshMind,
   generateLevel,
   heroStats,
+  mobThink,
   moveCostTicks,
   rollMobCount,
   rollMobKind,
   xpToNextLevel,
   type Level,
   type MobKind,
+  type MobMind,
   type Vec2,
   type VisibleActor,
   type VisionMessage,
@@ -53,6 +57,7 @@ export interface PlayerActor extends ActorBase {
 
 export interface MobActor extends ActorBase {
   kind: MobKind;
+  mind: MobMind;
 }
 
 export type Actor = PlayerActor | MobActor;
@@ -185,6 +190,7 @@ export class Match {
       evasion: def.evasion,
       damageMin: def.damageMin,
       damageMax: def.damageMax,
+      mind: freshMind(),
     };
     this.actors.set(id, mob);
     this.occupancy.set(this.level.grid.index(x, y), id);
@@ -224,23 +230,17 @@ export class Match {
    */
   update(): Map<string, VisionMessage> {
     this.tick++;
-    const grid = this.level.grid;
+
+    const playersSnapshot = [...this.actors.values()].filter(isPlayer).map((p) => ({
+      id: p.id,
+      pos: { x: p.x, y: p.y },
+      alive: p.alive,
+    }));
 
     for (const actor of this.actors.values()) {
-      if (!isPlayer(actor)) continue; // IA dos mobs entra na próxima tarefa
-      if (!actor.intent || this.tick < actor.nextActionAt) continue;
-      const dir = actor.intent;
-      actor.intent = null; // consome mesmo se inválida — sem feedback a cheats
-
-      if (!canStep(grid, actor, dir)) continue;
-      const targetIndex = grid.index(actor.x + dir.x, actor.y + dir.y);
-      if (this.occupancy.has(targetIndex)) continue; // tile ocupado
-
-      this.occupancy.delete(grid.index(actor.x, actor.y));
-      this.occupancy.set(targetIndex, actor.id);
-      actor.x += dir.x;
-      actor.y += dir.y;
-      actor.nextActionAt = this.tick + moveCostTicks(actor.speed);
+      if (this.tick < actor.nextActionAt) continue;
+      if (isPlayer(actor)) this.actPlayer(actor);
+      else this.actMob(actor, playersSnapshot);
     }
 
     // respawn lento até o teto do andar
@@ -249,6 +249,54 @@ export class Match {
     }
 
     return this.collectVisions();
+  }
+
+  private actPlayer(actor: PlayerActor): void {
+    if (!actor.intent) return;
+    const dir = actor.intent;
+    actor.intent = null; // consome mesmo se inválida — sem feedback a cheats
+    this.tryMove(actor, dir);
+  }
+
+  /** Mobs dormindo/esperando re-pensam a cada 5 ticks (0,5s) para poupar CPU. */
+  private static readonly IDLE_RETHINK_TICKS = 5;
+
+  private actMob(mob: MobActor, players: { id: string; pos: Vec2; alive: boolean }[]): void {
+    const grid = this.level.grid;
+    const action = mobThink(mob.mind, {
+      grid,
+      self: mob,
+      tick: this.tick,
+      players,
+      rng: this.rng,
+      isFree: (x, y) => !this.occupancy.has(grid.index(x, y)),
+    });
+
+    if (action.type === "move") {
+      if (!this.tryMove(mob, action.dir)) {
+        mob.nextActionAt = this.tick + Match.IDLE_RETHINK_TICKS;
+      }
+    } else if (action.type === "attack") {
+      // resolução de dano chega na próxima tarefa — por ora só consome o turno
+      mob.nextActionAt = this.tick + TICKS_PER_TIME_UNIT;
+    } else {
+      mob.nextActionAt = this.tick + Match.IDLE_RETHINK_TICKS;
+    }
+  }
+
+  /** Passo validado + ocupação; cobra o custo de tempo se moveu. */
+  private tryMove(actor: Actor, dir: Vec2): boolean {
+    const grid = this.level.grid;
+    if (!canStep(grid, actor, dir)) return false;
+    const targetIndex = grid.index(actor.x + dir.x, actor.y + dir.y);
+    if (this.occupancy.has(targetIndex)) return false;
+
+    this.occupancy.delete(grid.index(actor.x, actor.y));
+    this.occupancy.set(targetIndex, actor.id);
+    actor.x += dir.x;
+    actor.y += dir.y;
+    actor.nextActionAt = this.tick + moveCostTicks(actor.speed);
+    return true;
   }
 
   // ── visão ──────────────────────────────────────────────────────────
@@ -292,6 +340,7 @@ export class Match {
           hp: other.hp,
           maxHp: other.maxHp,
           moveTicks: moveCostTicks(other.speed),
+          asleep: !isPlayer(other) && other.mind.state === "sleeping",
         });
       }
     }

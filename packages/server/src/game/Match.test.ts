@@ -222,3 +222,47 @@ describe("Match — spawn de mobs", () => {
     expect(match.mobCount).toBe(cap);
   });
 });
+
+describe("Match — IA dos mobs em jogo", () => {
+  it("mob fora do alcance dorme parado (e chega como asleep na visão)", () => {
+    const match = new Match(makeTestLevel([{ x: 2, y: 2 }]));
+    match.addPlayer("a", "A");
+    const id = match.spawnMobAt("rat", 10, 2); // dist 8: jogador vê (raio 8), rato não (raio 6)
+
+    let asleep: boolean | undefined;
+    for (let t = 0; t < 30; t++) {
+      const v = match.update().get("a");
+      const rato = v?.actors.find((x) => x.id === id);
+      if (rato) asleep = rato.asleep;
+    }
+    expect(match.mobPositionsForTest().get(id)).toEqual({ x: 10, y: 2 });
+    expect(asleep).toBe(true);
+  });
+
+  it("mob próximo acorda e persegue até ficar adjacente ao jogador", () => {
+    const match = new Match(makeTestLevel([{ x: 2, y: 2 }]));
+    match.addPlayer("a", "A");
+    const id = match.spawnMobAt("rat", 7, 2); // dist 5: dentro do raio 6 do rato
+
+    for (let t = 0; t < 120; t++) match.update();
+    const pos = match.mobPositionsForTest().get(id)!;
+    const dist = Math.max(Math.abs(pos.x - 2), Math.abs(pos.y - 2));
+    expect(dist).toBe(1); // encostado, aguardando a resolução de ataque (T5)
+  });
+
+  it("caranguejo (speed 2) alcança o jogador mais rápido que o rato", () => {
+    const chase = (kind: "rat" | "crab") => {
+      const match = new Match(makeTestLevel([{ x: 2, y: 2 }]));
+      match.addPlayer("a", "A");
+      const id = match.spawnMobAt(kind, 8, 2);
+      let ticks = 0;
+      for (; ticks < 200; ticks++) {
+        match.update();
+        const pos = match.mobPositionsForTest().get(id)!;
+        if (Math.max(Math.abs(pos.x - 2), Math.abs(pos.y - 2)) === 1) break;
+      }
+      return ticks;
+    };
+    expect(chase("crab")).toBeLessThan(chase("rat"));
+  });
+});
