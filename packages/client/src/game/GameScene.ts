@@ -34,7 +34,8 @@ const CORES_JOGADOR = [
   0xe8554d, 0x4da3e8, 0x5fce6b, 0xe8c04d, 0xb35de8, 0x4de8d3, 0xe88a4d, 0xdd6fb1,
 ];
 
-const world = (tile: number) => tile * TILE_PX + TILE_PX / 2;
+/** Centro do tile em pixels de mundo. */
+export const tileToWorld = (tile: number) => tile * TILE_PX + TILE_PX / 2;
 
 interface ActorSprite {
   container: Phaser.GameObjects.Container;
@@ -48,7 +49,7 @@ export interface GameSceneData {
 }
 
 export class GameScene extends Phaser.Scene {
-  private conn!: GameConnection;
+  protected conn!: GameConnection;
   /** Mapa conhecido — desconhecido permanece Wall (bloqueado p/ pathfinding). */
   protected grid!: Grid;
   protected discovered = new Set<number>();
@@ -177,8 +178,8 @@ export class GameScene extends Phaser.Scene {
         sprite.y = actor.y;
         this.tweens.add({
           targets: sprite.container,
-          x: world(actor.x),
-          y: world(actor.y),
+          x: tileToWorld(actor.x),
+          y: tileToWorld(actor.y),
           duration: actor.moveTicks * 100,
           ease: "Linear",
         });
@@ -202,7 +203,7 @@ export class GameScene extends Phaser.Scene {
       .setOrigin(0.5, 0);
 
     const container = this.add
-      .container(world(actor.x), world(actor.y), [rect, label])
+      .container(tileToWorld(actor.x), tileToWorld(actor.y), [rect, label])
       .setDepth(10);
 
     if (souEu) {

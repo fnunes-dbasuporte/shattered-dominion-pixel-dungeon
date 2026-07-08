@@ -1,6 +1,7 @@
 import Phaser from "phaser";
 import { runLobby } from "./ui/lobby.js";
-import { GameScene, type GameSceneData } from "./game/GameScene.js";
+import type { GameSceneData } from "./game/GameScene.js";
+import { WalkableGameScene } from "./game/WalkableGameScene.js";
 
 async function main(): Promise<void> {
   const { conn, started } = await runLobby();
@@ -18,7 +19,7 @@ async function main(): Promise<void> {
       autoCenter: Phaser.Scale.CENTER_BOTH,
     },
   });
-  game.scene.add("Game", GameScene, true, data);
+  game.scene.add("Game", WalkableGameScene, true, data);
 }
 
 void main();
