@@ -1,0 +1,18 @@
+# Dependências e build
+node_modules/
+dist/
+
+# Segredos
+.env
+.env.*
+!.env.example
+
+# Infra da VM de produção — NUNCA commitar (repo é público; contém IP, portas e detalhes de acesso)
+INFRA-VM-*.md
+docs/infra/INFRA-VM-*.md
+
+# Documentos de planejamento e orientação — apenas locais, fora do repo público
+PLANO-MESTRE.md
+CLAUDE.md
+prompts/
+relatorios/
