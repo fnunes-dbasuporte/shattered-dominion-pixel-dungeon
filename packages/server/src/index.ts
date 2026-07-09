@@ -3,7 +3,8 @@ import { createGameServer } from "./app.js";
 
 const port = Number(process.env.PORT ?? 2567);
 // Em produção o bind DEVE ser 127.0.0.1 (atrás do nginx) — configurar via .env.
-const host = process.env.HOST ?? "localhost";
+// BIND_ADDR é a convenção dos apps da VM; HOST segue aceito (sprint 00).
+const host = process.env.BIND_ADDR ?? process.env.HOST ?? "localhost";
 
 const server = createGameServer();
 await server.listen(port, host);

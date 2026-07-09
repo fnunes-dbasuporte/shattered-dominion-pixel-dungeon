@@ -1,0 +1,32 @@
+# Unit systemd do servidor do jogo (VM Lightsail compartilhada).
+# Instalação: sudo cp deploy/shattered-dominion.service /etc/systemd/system/
+#             sudo systemctl daemon-reload && sudo systemctl enable --now shattered-dominion
+# O Node 22 é PRIVADO do app (/opt/shattered-dominion/node) — o node do
+# sistema é 20 e pertence aos vizinhos; não atualizar o global.
+
+[Unit]
+Description=Shattered Dominion Pixel Dungeon — servidor Colyseus (127.0.0.1:3005)
+Documentation=https://github.com/fnunes-dbasuporte/shattered-dominion-pixel-dungeon
+After=network.target
+
+[Service]
+Type=simple
+User=admin
+WorkingDirectory=/opt/shattered-dominion/current
+EnvironmentFile=/opt/shattered-dominion/.env
+ExecStart=/opt/shattered-dominion/node/bin/node --max-old-space-size=256 /opt/shattered-dominion/current/server.mjs
+Restart=always
+RestartSec=3
+
+# Teto duro de RAM: a VM tem ~666 MiB livres — estourou, o kernel mata SÓ
+# este serviço (runs são efêmeras; Restart=always recomeça limpo).
+MemoryMax=400M
+
+# Endurecimento leve — o processo só escuta em loopback atrás do nginx.
+NoNewPrivileges=true
+PrivateTmp=true
+ProtectSystem=full
+ProtectHome=read-only
+
+[Install]
+WantedBy=multi-user.target
