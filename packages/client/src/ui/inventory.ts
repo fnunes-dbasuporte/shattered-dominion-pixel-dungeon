@@ -2,14 +2,6 @@ import type { InventoryEntry, YouState } from "@shattered-dominion/shared";
 import { INVENTORY_SLOTS } from "@shattered-dominion/shared";
 import type { GameConnection } from "../net/connection.js";
 
-const GLYPHS: Record<string, string> = {
-  weapon: "†",
-  armor: "▣",
-  potion: "!",
-  scroll: "?",
-  food: "%",
-};
-
 const ACTION_LABEL: Record<string, string> = {
   weapon: "Equipar",
   armor: "Equipar",
@@ -79,7 +71,7 @@ export class InventoryPanel {
         continue;
       }
       html += `<div class="inv-slot${this.identifySource ? " alvo" : ""}" data-slot-uid="${item.uid}">
-        <div class="inv-glyph cat-${item.category}">${GLYPHS[item.category] ?? "•"}</div>
+        <img class="inv-icon" src="assets/items/${item.icon}.png" alt="" draggable="false" />
         <div class="inv-label">${escapeHtml(item.label)}${item.equipped ? ' <span class="equipado">[E]</span>' : ""}</div>
         ${this.identifySource ? "" : this.actionsFor(item)}
       </div>`;

@@ -27,6 +27,7 @@ import {
   POISON_DURATION_UNITS,
   displayLabel,
   itemCategory,
+  itemIcon,
   itemTrueName,
   pickTeleportTarget,
   rollAppearances,
@@ -1003,6 +1004,7 @@ export class Match {
         x: entity.x,
         y: entity.y,
         category: entity.kind === "gold" ? "gold" : itemCategory(entity.item.itemId),
+        icon: entity.kind === "gold" ? "gold" : itemIcon(entity.item.itemId, this.appearances),
         label:
           entity.kind === "gold"
             ? `${entity.amount} moedas`
@@ -1019,6 +1021,7 @@ export class Match {
     const inventory: InventoryEntry[] = player.inventory.map((item) => ({
       uid: item.uid,
       label: displayLabel(item.itemId, item.upgrade, player.identified, this.appearances),
+      icon: itemIcon(item.itemId, this.appearances),
       category: itemCategory(item.itemId),
       identified:
         itemCategory(item.itemId) !== "potion" && itemCategory(item.itemId) !== "scroll"

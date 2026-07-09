@@ -75,6 +75,8 @@ export interface VisibleActor {
 export interface InventoryEntry {
   uid: string;
   label: string;
+  /** slug do ícone (assets/items/<icon>.png) — para poções, é a APARÊNCIA. */
+  icon: string;
   category: ItemCategory;
   identified: boolean;
   equipped: boolean;
@@ -88,6 +90,8 @@ export interface VisibleItem {
   y: number;
   category: ItemCategory | "gold";
   label: string;
+  /** slug do ícone (assets/items/<icon>.png). */
+  icon: string;
 }
 
 /** Estado privado do próprio jogador — só ele recebe. */

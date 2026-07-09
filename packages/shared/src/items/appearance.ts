@@ -49,6 +49,29 @@ export function unidentifiedLabel(itemId: ItemId, appearances: RunAppearances): 
   return itemTrueName(itemId); // armas/armaduras/comida são sempre reconhecíveis
 }
 
+/** Slug de arquivo por cor de poção (sem acentos). */
+const POTION_ICON_SLUGS: Record<string, string> = {
+  vermelha: "potion-vermelha",
+  azul: "potion-azul",
+  esverdeada: "potion-esverdeada",
+  turva: "potion-turva",
+  âmbar: "potion-ambar",
+  violeta: "potion-violeta",
+};
+
+/**
+ * Ícone público de um item: poções mostram a APARÊNCIA da run (nunca o
+ * tipo real), pergaminhos um ícone único; o resto é reconhecível pelo id.
+ */
+export function itemIcon(itemId: ItemId, appearances: RunAppearances): string {
+  const cat = itemCategory(itemId);
+  if (cat === "potion") {
+    return POTION_ICON_SLUGS[appearances.potions[itemId as PotionId]] ?? "potion-turva";
+  }
+  if (cat === "scroll") return "scroll";
+  return itemId;
+}
+
 /** Rótulo exibido a um jogador conforme seu conjunto de tipos identificados. */
 export function displayLabel(
   itemId: ItemId,

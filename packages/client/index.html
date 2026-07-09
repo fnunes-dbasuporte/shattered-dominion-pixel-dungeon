@@ -39,9 +39,10 @@
       }
       .card {
         background: #17141f;
-        border: 1px solid #2c2740;
-        border-radius: 8px;
-        padding: 28px 32px;
+        border: 14px solid transparent;
+        border-image: url("assets/ui/panel.png") 32 round;
+        image-rendering: pixelated;
+        padding: 20px 24px;
         width: min(420px, 90vw);
         display: flex;
         flex-direction: column;
@@ -164,9 +165,10 @@
       }
       .inv-card {
         background: #17141f;
-        border: 1px solid #2c2740;
-        border-radius: 8px;
-        padding: 18px 20px;
+        border: 14px solid transparent;
+        border-image: url("assets/ui/panel.png") 32 round;
+        image-rendering: pixelated;
+        padding: 12px 14px;
         width: min(640px, 94vw);
       }
       .inv-head {
@@ -198,9 +200,10 @@
         cursor: pointer;
         border-color: #e8c04d;
       }
-      .inv-glyph {
-        font-size: 16px;
-        font-weight: bold;
+      .inv-icon {
+        width: 32px;
+        height: 32px;
+        image-rendering: pixelated;
       }
       .cat-weapon {
         color: #cfd2d8;

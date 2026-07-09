@@ -55,6 +55,98 @@
           "out": "tiles/stairs-up.png"
         }
       ]
+    },
+    {
+      "id": "item-icons",
+      "kind": "objects",
+      "pixellabId": "bd605e4c-7f82-4b98-a1dc-718568470f2e",
+      "prompt": "pixel art RPG inventory item icons, dark fantasy sewer dungeon style, black outline (18 item_descriptions numeradas; 32px; review pack)",
+      "files": [
+        {
+          "url": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/cff6e754-723a-49f1-878e-f8caf6e7545a/bd605e4c-7f82-4b98-a1dc-718568470f2e/rotations/frame_0.png",
+          "out": "items/dagger.png"
+        },
+        {
+          "url": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/cff6e754-723a-49f1-878e-f8caf6e7545a/bd605e4c-7f82-4b98-a1dc-718568470f2e/rotations/frame_1.png",
+          "out": "items/shortsword.png"
+        },
+        {
+          "url": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/cff6e754-723a-49f1-878e-f8caf6e7545a/bd605e4c-7f82-4b98-a1dc-718568470f2e/rotations/frame_2.png",
+          "out": "items/mace.png"
+        },
+        {
+          "url": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/cff6e754-723a-49f1-878e-f8caf6e7545a/bd605e4c-7f82-4b98-a1dc-718568470f2e/rotations/frame_3.png",
+          "out": "items/leather.png"
+        },
+        {
+          "url": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/cff6e754-723a-49f1-878e-f8caf6e7545a/bd605e4c-7f82-4b98-a1dc-718568470f2e/rotations/frame_4.png",
+          "out": "items/chainmail.png"
+        },
+        {
+          "url": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/cff6e754-723a-49f1-878e-f8caf6e7545a/bd605e4c-7f82-4b98-a1dc-718568470f2e/rotations/frame_5.png",
+          "out": "items/potion-vermelha.png"
+        },
+        {
+          "url": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/cff6e754-723a-49f1-878e-f8caf6e7545a/bd605e4c-7f82-4b98-a1dc-718568470f2e/rotations/frame_6.png",
+          "out": "items/potion-azul.png"
+        },
+        {
+          "url": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/cff6e754-723a-49f1-878e-f8caf6e7545a/bd605e4c-7f82-4b98-a1dc-718568470f2e/rotations/frame_7.png",
+          "out": "items/potion-esverdeada.png"
+        },
+        {
+          "url": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/cff6e754-723a-49f1-878e-f8caf6e7545a/bd605e4c-7f82-4b98-a1dc-718568470f2e/rotations/frame_8.png",
+          "out": "items/potion-turva.png"
+        },
+        {
+          "url": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/cff6e754-723a-49f1-878e-f8caf6e7545a/bd605e4c-7f82-4b98-a1dc-718568470f2e/rotations/frame_9.png",
+          "out": "items/potion-ambar.png"
+        },
+        {
+          "url": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/cff6e754-723a-49f1-878e-f8caf6e7545a/bd605e4c-7f82-4b98-a1dc-718568470f2e/rotations/frame_10.png",
+          "out": "items/potion-violeta.png"
+        },
+        {
+          "url": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/cff6e754-723a-49f1-878e-f8caf6e7545a/bd605e4c-7f82-4b98-a1dc-718568470f2e/rotations/frame_11.png",
+          "out": "items/scroll.png"
+        },
+        {
+          "url": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/cff6e754-723a-49f1-878e-f8caf6e7545a/bd605e4c-7f82-4b98-a1dc-718568470f2e/rotations/frame_12.png",
+          "out": "items/ration.png"
+        },
+        {
+          "url": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/cff6e754-723a-49f1-878e-f8caf6e7545a/bd605e4c-7f82-4b98-a1dc-718568470f2e/rotations/frame_13.png",
+          "out": "items/gold.png"
+        },
+        {
+          "url": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/cff6e754-723a-49f1-878e-f8caf6e7545a/bd605e4c-7f82-4b98-a1dc-718568470f2e/rotations/frame_14.png",
+          "out": "items/ankh.png"
+        },
+        {
+          "url": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/cff6e754-723a-49f1-878e-f8caf6e7545a/bd605e4c-7f82-4b98-a1dc-718568470f2e/rotations/frame_15.png",
+          "out": "fx/slash.png"
+        },
+        {
+          "url": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/cff6e754-723a-49f1-878e-f8caf6e7545a/bd605e4c-7f82-4b98-a1dc-718568470f2e/rotations/frame_16.png",
+          "out": "fx/poof.png"
+        },
+        {
+          "url": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/cff6e754-723a-49f1-878e-f8caf6e7545a/bd605e4c-7f82-4b98-a1dc-718568470f2e/rotations/frame_17.png",
+          "out": "fx/sparkle.png"
+        }
+      ]
+    },
+    {
+      "id": "ui-panel",
+      "kind": "ui",
+      "pixellabId": "7f3e7eff-739d-499f-a25b-af3e81f012c9",
+      "prompt": "dark mossy stone RPG panel with carved rim, sewer dungeon style, teal-green accents",
+      "files": [
+        {
+          "url": "https://backblaze.pixellab.ai/file/pixellab-characters/ui/cff6e754-723a-49f1-878e-f8caf6e7545a/7f3e7eff-739d-499f-a25b-af3e81f012c9/full.png",
+          "out": "ui/panel.png"
+        }
+      ]
     }
   ],
   "characters": [
@@ -72,6 +164,30 @@
         "falling_backward": "death"
       },
       "recolor": true
+    },
+    {
+      "id": "rat",
+      "pixellabId": "5a785db8-f3ec-40ed-a4eb-e214d0308985",
+      "prompt": "mangy sewer rat with matted brown fur, long pink tail, hunched and twitchy, beady red eyes (quadruped/cat)",
+      "canvas": 24,
+      "out": "sprites/rat.png",
+      "zip": "https://api.pixellab.ai/mcp/characters/5a785db8-f3ec-40ed-a4eb-e214d0308985/download",
+      "animMap": {
+        "running": "walk",
+        "acting_angry": "attack"
+      }
+    },
+    {
+      "id": "crab",
+      "pixellabId": "ef8f3fa9-4e51-4a7b-a683-5844e430838f",
+      "prompt": "wide flat sewer crab, rust-orange shell, two big raised pincers, many small legs, low squat body",
+      "canvas": 24,
+      "out": "sprites/crab.png",
+      "zip": "https://api.pixellab.ai/mcp/characters/ef8f3fa9-4e51-4a7b-a683-5844e430838f/download",
+      "animMap": {
+        "animating": "walk",
+        "cross_punch_attack": "attack"
+      }
     }
   ]
 }
