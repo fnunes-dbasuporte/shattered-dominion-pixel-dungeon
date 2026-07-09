@@ -10,6 +10,7 @@ export enum RoomType {
   Entrance = 1,
   Exit = 2,
   Treasure = 3,
+  Boss = 4,
 }
 
 /** Sala retangular; o Rect é o interior (piso) — o anel de paredes fica em volta. */
@@ -28,4 +29,6 @@ export interface Level {
   stairsDown: Vec2;
   /** Até 8 pontos de spawn, na sala de entrada (a da escada de subida). */
   spawnPoints: Vec2[];
+  /** Presente apenas no covil do boss (andar 5): onde o chefe desperta. */
+  bossSpawn?: Vec2;
 }

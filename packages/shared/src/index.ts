@@ -17,5 +17,6 @@ export * from "./dungeon/corridors.js";
 export * from "./dungeon/stairs.js";
 export * from "./dungeon/decorate.js";
 export * from "./dungeon/generateLevel.js";
+export * from "./dungeon/bossArena.js";
 export * from "./dungeon/fov.js";
 export * from "./dungeon/pathfind.js";

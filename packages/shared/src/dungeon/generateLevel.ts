@@ -5,6 +5,7 @@ import { placeRooms } from "./rooms.js";
 import { connectRooms } from "./corridors.js";
 import { placeStairsAndSpawns } from "./stairs.js";
 import { decorateSewers } from "./decorate.js";
+import { BOSS_DEPTH, generateBossArena } from "./bossArena.js";
 
 /** Último andar do tema esgotos (v1.0 cobre os andares 1–5). */
 export const SEWERS_MAX_DEPTH = 5;
@@ -14,6 +15,7 @@ export const SEWERS_MAX_DEPTH = 5;
  * salas → corredores/portas → escadas/spawns → decoração do tema.
  */
 export function generateLevel(seed: number, depth: number): Level {
+  if (depth === BOSS_DEPTH) return generateBossArena(seed);
   const rng = new Rng(seed).fork(`depth:${depth}`);
   const grid = new Grid(LEVEL_WIDTH, LEVEL_HEIGHT);
 
