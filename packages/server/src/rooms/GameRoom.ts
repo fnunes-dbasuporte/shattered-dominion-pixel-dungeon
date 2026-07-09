@@ -104,6 +104,37 @@ export class GameRoom extends Room {
     );
   }
 
+  /**
+   * Queda sem consentimento durante a partida: o herói fica em jogo (o Match
+   * o adormece após 60s) e o assento fica reservado até a run acabar. No
+   * lobby não há o que preservar — segue o fluxo padrão (onLeave remove).
+   */
+  override async onDrop(client: Client): Promise<void> {
+    if (this.state.phase !== "playing" || !this.match) return;
+
+    this.match.setDropped(client.sessionId);
+    const player = this.state.players.get(client.sessionId);
+    console.log(`[GameRoom ${this.roomId}] caiu: ${player?.name ?? client.sessionId}`);
+
+    try {
+      const reconnected = await this.allowReconnection(client, 3600);
+      this.match.reconnectPlayer(reconnected.sessionId);
+
+      // ressincroniza um cliente possivelmente recarregado
+      const started: MatchStartedMessage = {
+        width: this.match.level.width,
+        height: this.match.level.height,
+        depth: this.state.depth,
+      };
+      reconnected.send(MessageType.MatchStarted, started);
+      const full = this.match.fullVisionFor(reconnected.sessionId);
+      if (full) reconnected.send(MessageType.Vision, full);
+      console.log(`[GameRoom ${this.roomId}] reconectou: ${player?.name ?? client.sessionId}`);
+    } catch {
+      // reconexão expirou/cancelada — onLeave fará a limpeza definitiva
+    }
+  }
+
   override onLeave(client: Client): void {
     const player = this.state.players.get(client.sessionId);
     this.state.players.delete(client.sessionId);

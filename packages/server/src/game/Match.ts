@@ -87,6 +87,9 @@ export interface PlayerActor extends ActorBase {
   equippedArmor: string | null;
   /** envenenado até este tick (0 = saudável). */
   poisonedUntilTick: number;
+  /** online = jogando · dropped = caiu (60s de carência) · dormant = adormecido. */
+  conn: "online" | "dropped" | "dormant";
+  droppedAtTick: number;
   /** buffer de 1 slot — a última intenção recebida vence. */
   intent: Vec2 | null;
   /** memória do mapa: índices de tiles já descobertos por ESTE jogador. */
@@ -184,6 +187,8 @@ export class Match {
       equippedWeapon: null,
       equippedArmor: null,
       poisonedUntilTick: 0,
+      conn: "online",
+      droppedAtTick: 0,
       intent: null,
       discovered: new Set(),
       lastVisionKey: "",
@@ -216,11 +221,69 @@ export class Match {
    */
   queueIntent(id: string, dx: unknown, dy: unknown): void {
     const actor = this.actors.get(id);
-    if (!actor || !isPlayer(actor) || !actor.alive) return;
+    if (!actor || !isPlayer(actor) || !actor.alive || actor.conn !== "online") return;
     if (typeof dx !== "number" || typeof dy !== "number") return;
     if (!Number.isInteger(dx) || !Number.isInteger(dy)) return;
     if (Math.abs(dx) > 1 || Math.abs(dy) > 1 || (dx === 0 && dy === 0)) return;
     actor.intent = { x: dx, y: dy };
+  }
+
+  // ── conexão (queda, dormência, reconexão) ──────────────────────────
+
+  /** Carência antes de adormecer: 60s de jogo. */
+  static readonly DORMANCY_TICKS = 60 * TICKS_PER_TIME_UNIT;
+
+  /** Queda de conexão: herói fica em jogo, parado e vulnerável, por 60s. */
+  setDropped(id: string): void {
+    const p = this.actors.get(id);
+    if (!p || !isPlayer(p) || p.conn !== "online") return;
+    p.conn = "dropped";
+    p.droppedAtTick = this.tick;
+    p.intent = null;
+  }
+
+  /** Volta do jogador: acorda do estado atual e devolve o controle. */
+  reconnectPlayer(id: string): void {
+    const p = this.actors.get(id);
+    if (!p || !isPlayer(p)) return;
+    if (p.conn === "dormant") {
+      // realoca: o tile original pode ter sido ocupado enquanto dormia
+      const spot = this.findFreeTileNear(p) ?? p;
+      p.x = spot.x;
+      p.y = spot.y;
+      this.occupancy.set(this.level.grid.index(p.x, p.y), p.id);
+    }
+    p.conn = "online";
+    p.lastVisionKey = ""; // força reenvio da visão no próximo tick
+  }
+
+  /**
+   * Visão completa para ressincronizar um cliente que voltou (possivelmente
+   * com a página recarregada): inclui TODA a memória de mapa do jogador.
+   */
+  fullVisionFor(id: string): VisionMessage | null {
+    const p = this.actors.get(id);
+    if (!p || !isPlayer(p)) return null;
+    const grid = this.level.grid;
+    const fov = computeFov(grid, p, FOV_RADIUS);
+    const message = this.buildVision(p, fov);
+    message.discovered = [...p.discovered]
+      .sort((a, b) => a - b)
+      .map((i) => [i, grid.tiles[i]] as [number, number]);
+    p.lastVisionKey = "";
+    return message;
+  }
+
+  private processDormancy(): void {
+    for (const p of this.actors.values()) {
+      if (!isPlayer(p) || p.conn !== "dropped") continue;
+      if (this.tick - p.droppedAtTick < Match.DORMANCY_TICKS) continue;
+      // adormece: invulnerável (IA o ignora) e sem colisão (sai da ocupação)
+      p.conn = "dormant";
+      p.intent = null;
+      this.occupancy.delete(this.level.grid.index(p.x, p.y));
+      this.info(p, `${p.name} adormeceu`);
+    }
   }
 
   // ── mobs ───────────────────────────────────────────────────────────
@@ -595,10 +658,13 @@ export class Match {
   update(): Map<string, VisionMessage> {
     this.tick++;
 
+    this.processDormancy();
+
+    // adormecidos são invisíveis para a IA (invulneráveis)
     const playersSnapshot = [...this.actors.values()].filter(isPlayer).map((p) => ({
       id: p.id,
       pos: { x: p.x, y: p.y },
-      alive: p.alive,
+      alive: p.alive && p.conn !== "dormant",
     }));
 
     for (const actor of this.actors.values()) {
@@ -663,7 +729,7 @@ export class Match {
       // revalidação no servidor: alvo vivo e de fato adjacente
       const adjacente =
         target && Math.max(Math.abs(target.x - mob.x), Math.abs(target.y - mob.y)) === 1;
-      if (target && isPlayer(target) && target.alive && adjacente) {
+      if (target && isPlayer(target) && target.alive && target.conn !== "dormant" && adjacente) {
         this.resolveAttack(mob, target);
       }
       mob.nextActionAt = this.tick + TICKS_PER_TIME_UNIT;
@@ -878,7 +944,8 @@ export class Match {
 
     const actorsInView: VisibleActor[] = [];
     for (const other of this.actors.values()) {
-      if (isPlayer(other) && !other.alive) continue; // fantasmas não aparecem
+      // fantasmas e adormecidos não aparecem
+      if (isPlayer(other) && (!other.alive || other.conn === "dormant")) continue;
       if (fov.has(grid.index(other.x, other.y))) {
         actorsInView.push({
           id: other.id,

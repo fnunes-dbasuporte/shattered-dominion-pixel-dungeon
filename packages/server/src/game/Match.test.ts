@@ -653,6 +653,113 @@ describe("Match — efeitos em runtime (veneno)", () => {
   });
 });
 
+describe("Match — queda, dormência e reconexão", () => {
+  it("dropped: herói fica parado mas ainda é alvo da IA", () => {
+    const match = new Match(makeTestLevel([{ x: 2, y: 2 }]));
+    match.addPlayer("a", "A");
+    match.spawnMobAt("gnoll", 5, 2);
+    match.setDropped("a");
+
+    // intenções são ignoradas enquanto caído
+    match.queueIntent("a", 1, 0);
+    match.update();
+    expect(match.positionOf("a")).toEqual({ x: 2, y: 2 });
+
+    // o gnoll ainda o caça e machuca
+    let hp = 20;
+    for (let t = 0; t < 300; t++) {
+      match.update();
+      const a = match.actorForTest("a")!;
+      hp = a.hp;
+      if (hp < 20) break;
+    }
+    expect(hp).toBeLessThan(20);
+  });
+
+  it("após 600 ticks caído vira adormecido: invulnerável, sem colisão e invisível", () => {
+    const match = new Match(
+      makeTestLevel([
+        { x: 2, y: 2 },
+        { x: 4, y: 2 },
+      ]),
+    );
+    match.addPlayer("a", "A");
+    match.addPlayer("b", "B");
+    match.spawnMobAt("gnoll", 20, 8); // longe, para não interferir
+    match.setDropped("a");
+
+    for (let t = 0; t <= Match.DORMANCY_TICKS; t++) match.update();
+    const a = match.actorForTest("a")!;
+    if (a.kind !== "player") throw new Error();
+    expect(a.conn).toBe("dormant");
+
+    // sem colisão: B anda até o tile onde A dorme
+    match.queueIntent("b", -1, 0);
+    for (let t = 0; t < 12; t++) match.update();
+    match.queueIntent("b", -1, 0);
+    for (let t = 0; t < 12; t++) match.update();
+    expect(match.positionOf("b")).toEqual({ x: 2, y: 2 });
+
+    // invisível para o aliado
+    match.queueIntent("b", 1, 0);
+    let atores: string[] = [];
+    for (let t = 0; t < 12; t++) {
+      const v = match.update().get("b");
+      if (v) atores = v.actors.map((x) => x.id);
+    }
+    expect(atores).not.toContain("a");
+  });
+
+  it("reconectar de adormecido realoca (tile pode estar ocupado) e devolve o controle", () => {
+    const match = new Match(
+      makeTestLevel([
+        { x: 2, y: 2 },
+        { x: 4, y: 2 },
+      ]),
+    );
+    match.addPlayer("a", "A");
+    match.addPlayer("b", "B");
+    match.setDropped("a");
+    for (let t = 0; t <= Match.DORMANCY_TICKS; t++) match.update();
+
+    // B ocupa o tile do dorminhoco
+    match.queueIntent("b", -1, 0);
+    for (let t = 0; t < 12; t++) match.update();
+    match.queueIntent("b", -1, 0);
+    for (let t = 0; t < 12; t++) match.update();
+    expect(match.positionOf("b")).toEqual({ x: 2, y: 2 });
+
+    match.reconnectPlayer("a");
+    const a = match.actorForTest("a")!;
+    if (a.kind !== "player") throw new Error();
+    expect(a.conn).toBe("online");
+    expect(match.positionOf("a")).not.toEqual({ x: 2, y: 2 }); // realocado
+
+    // controle de volta (anda para a direita — longe do B)
+    const antes = match.positionOf("a")!;
+    match.queueIntent("a", 1, 0);
+    for (let t = 0; t < 12; t++) match.update();
+    expect(match.positionOf("a")).not.toEqual(antes);
+  });
+
+  it("fullVisionFor devolve toda a memória de mapa do jogador", () => {
+    const match = new Match(makeTestLevel([{ x: 2, y: 2 }]));
+    match.addPlayer("a", "A");
+    match.update();
+    // anda para descobrir mais tiles
+    match.queueIntent("a", 1, 0);
+    for (let t = 0; t < 12; t++) match.update();
+
+    const a = match.actorForTest("a")!;
+    if (a.kind !== "player") throw new Error();
+    const memoria = a.discovered.size;
+    expect(memoria).toBeGreaterThan(0);
+
+    const full = match.fullVisionFor("a")!;
+    expect(full.discovered).toHaveLength(memoria);
+  });
+});
+
 describe("Match — morte de jogador, espectador e revive", () => {
   it("a 0 HP vira espectador: alive=false, tile liberado, intenções ignoradas", () => {
     const match = new Match(
