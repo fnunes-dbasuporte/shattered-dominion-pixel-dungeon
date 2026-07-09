@@ -1,0 +1,55 @@
+{
+  "frameWidth": 24,
+  "frameHeight": 24,
+  "columns": 6,
+  "rows": {
+    "still-south": {
+      "row": 0,
+      "count": 1
+    },
+    "still-east": {
+      "row": 1,
+      "count": 1
+    },
+    "still-north": {
+      "row": 2,
+      "count": 1
+    },
+    "still-west": {
+      "row": 3,
+      "count": 1
+    },
+    "walk-south": {
+      "row": 4,
+      "count": 4
+    },
+    "walk-east": {
+      "row": 5,
+      "count": 4
+    },
+    "walk-north": {
+      "row": 6,
+      "count": 4
+    },
+    "walk-west": {
+      "row": 7,
+      "count": 4
+    },
+    "attack-south": {
+      "row": 8,
+      "count": 6
+    },
+    "attack-east": {
+      "row": 9,
+      "count": 6
+    },
+    "attack-north": {
+      "row": 10,
+      "count": 6
+    },
+    "attack-west": {
+      "row": 11,
+      "count": 6
+    }
+  }
+}

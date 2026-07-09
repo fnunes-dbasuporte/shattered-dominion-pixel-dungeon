@@ -64,6 +64,7 @@ export const tileToWorld = (tile: number) => tile * TILE_PX + TILE_PX / 2;
 interface ActorSprite {
   container: Phaser.GameObjects.Container;
   sprite: Phaser.GameObjects.Sprite;
+  label: Phaser.GameObjects.Text;
   hpBar: Phaser.GameObjects.Graphics;
   kind: ActorKind;
   texture: string;
@@ -566,6 +567,8 @@ export class GameScene extends Phaser.Scene {
         });
       }
       this.drawMiniHpBar(sprite, actor);
+      const nome = actor.asleep ? `${actor.name} 💤` : actor.name;
+      if (sprite.label.text !== nome) sprite.label.setText(nome);
     }
     return appeared;
   }
@@ -604,6 +607,7 @@ export class GameScene extends Phaser.Scene {
     const actorSprite: ActorSprite = {
       container,
       sprite,
+      label,
       hpBar,
       kind: actor.kind,
       texture,

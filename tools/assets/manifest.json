@@ -188,6 +188,18 @@
         "animating": "walk",
         "cross_punch_attack": "attack"
       }
+    },
+    {
+      "id": "gnoll",
+      "pixellabId": "5c5bfff2-cd56-4a1b-b240-7512f9ff5dcc",
+      "prompt": "feral jackal-headed scout, tan and olive fur, tattered leather harness, clawed hands, short spear",
+      "canvas": 24,
+      "out": "sprites/gnoll.png",
+      "zip": "https://api.pixellab.ai/mcp/characters/5c5bfff2-cd56-4a1b-b240-7512f9ff5dcc/download",
+      "animMap": {
+        "animating": "walk",
+        "cross_punch_attack": "attack"
+      }
     }
   ]
 }
