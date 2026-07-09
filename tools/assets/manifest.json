@@ -158,8 +158,8 @@
       "out": "sprites/hero.png",
       "zip": "https://api.pixellab.ai/mcp/characters/ed837fa5-5cbe-46bb-97eb-8ca7337c8697/download",
       "animMap": {
-        "animating-e4e69cb4": "walk",
-        "animating": "idle",
+        "animating": "walk",
+        "animating-e4e69cb4": "idle",
         "cross_punch_attack": "attack",
         "falling_backward": "death"
       },
