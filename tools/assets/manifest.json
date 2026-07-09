@@ -153,13 +153,13 @@
     {
       "id": "hero",
       "pixellabId": "a99d5d17-4e44-4b29-88c7-2d9d82710758",
-      "prompt": "Create one game-ready 32x32 pixel-art RPG hero sprite inspired by classic Pixel Dungeon / Shattered Pixel Dungeon roguelike characters. A grizzled human warrior gripping a short sword, worn leather armor with a teal cloth sash. Style: tiny 16-bit dungeon crawler sprite, front-facing idle pose, slight 3/4 top-down view, transparent background, crisp pixels, 1-pixel dark outline, limited muted fantasy palette, chibi proportions, large square head, small body, short legs, simple black pixel eyes, no mouth, no antialiasing, no gradients, no blur, no text, no logo, no background. The sprite must be readable at very small size and look like an in-game roguelike asset. (prompt do Felipe; mode v3, 32px; walk enfileirado sozinho primeiro)",
+      "prompt": "Create one game-ready 32x32 pixel-art RPG hero sprite inspired by classic Pixel Dungeon / Shattered Pixel Dungeon roguelike characters. A grizzled human warrior gripping a short sword, worn leather armor with a teal cloth sash. Style: tiny 16-bit dungeon crawler sprite, front-facing idle pose, slight 3/4 top-down view, transparent background, crisp pixels, 1-pixel dark outline, limited muted fantasy palette, chibi proportions, large square head, small body, short legs, simple black pixel eyes, no mouth, no antialiasing, no gradients, no blur, no text, no logo, no background. The sprite must be readable at very small size and look like an in-game roguelike asset. (prompt do Felipe; mode v3, 32px; mapeamento walk/idle VERIFICADO por analise de movimento das pernas — o nome de pasta do zip NAO e estavel entre downloads)",
       "canvas": 56,
       "out": "sprites/hero.png",
       "zip": "https://api.pixellab.ai/mcp/characters/a99d5d17-4e44-4b29-88c7-2d9d82710758/download",
       "animMap": {
-        "animating": "walk",
-        "animating-bf6609fd": "idle",
+        "animating-bf6609fd": "walk",
+        "animating": "idle",
         "cross_punch_attack": "attack",
         "falling_backward": "death"
       },
