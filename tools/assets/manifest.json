@@ -1,0 +1,61 @@
+{
+  "version": 1,
+  "note": "Assets gerados via Pixellab (MCP). Cada entrada guarda o ID do job, o prompt exato e as URLs de origem. pnpm assets:gen baixa tudo que faltar em packages/client/public/assets/.",
+  "assets": [
+    {
+      "id": "tileset-sewers",
+      "kind": "tiles",
+      "pixellabId": "839fbdc2-e555-4370-91d6-914da5974c8e",
+      "prompt": "1). dark mossy stone brick wall 2). grey flagstone floor 3). cracked grey flagstone floor 4). moss-stained flagstone floor 5). murky green sewage water 6). sickly pale weeds growing between stones 7). smoldering orange embers on scorched stone 8). rotten wooden door closed, iron bands 9). stone stairs descending into darkness 10). stone stairs ascending with faint light",
+      "params": {
+        "tile_type": "square_topdown",
+        "tile_size": 16,
+        "tile_view": "top-down",
+        "outline_mode": "segmentation"
+      },
+      "files": [
+        {
+          "url": "https://backblaze.pixellab.ai/file/pixellab-tiles/cff6e754-723a-49f1-878e-f8caf6e7545a/839fbdc2-e555-4370-91d6-914da5974c8e/tile_0.png",
+          "out": "tiles/wall.png"
+        },
+        {
+          "url": "https://backblaze.pixellab.ai/file/pixellab-tiles/cff6e754-723a-49f1-878e-f8caf6e7545a/839fbdc2-e555-4370-91d6-914da5974c8e/tile_1.png",
+          "out": "tiles/floor-1.png"
+        },
+        {
+          "url": "https://backblaze.pixellab.ai/file/pixellab-tiles/cff6e754-723a-49f1-878e-f8caf6e7545a/839fbdc2-e555-4370-91d6-914da5974c8e/tile_2.png",
+          "out": "tiles/floor-2.png"
+        },
+        {
+          "url": "https://backblaze.pixellab.ai/file/pixellab-tiles/cff6e754-723a-49f1-878e-f8caf6e7545a/839fbdc2-e555-4370-91d6-914da5974c8e/tile_3.png",
+          "out": "tiles/floor-3.png"
+        },
+        {
+          "url": "https://backblaze.pixellab.ai/file/pixellab-tiles/cff6e754-723a-49f1-878e-f8caf6e7545a/839fbdc2-e555-4370-91d6-914da5974c8e/tile_4.png",
+          "out": "tiles/water.png"
+        },
+        {
+          "url": "https://backblaze.pixellab.ai/file/pixellab-tiles/cff6e754-723a-49f1-878e-f8caf6e7545a/839fbdc2-e555-4370-91d6-914da5974c8e/tile_10.png",
+          "out": "tiles/grass.png"
+        },
+        {
+          "url": "https://backblaze.pixellab.ai/file/pixellab-tiles/cff6e754-723a-49f1-878e-f8caf6e7545a/839fbdc2-e555-4370-91d6-914da5974c8e/tile_11.png",
+          "out": "tiles/embers.png"
+        },
+        {
+          "url": "https://backblaze.pixellab.ai/file/pixellab-tiles/cff6e754-723a-49f1-878e-f8caf6e7545a/839fbdc2-e555-4370-91d6-914da5974c8e/tile_13.png",
+          "out": "tiles/door.png"
+        },
+        {
+          "url": "https://backblaze.pixellab.ai/file/pixellab-tiles/cff6e754-723a-49f1-878e-f8caf6e7545a/839fbdc2-e555-4370-91d6-914da5974c8e/tile_14.png",
+          "out": "tiles/stairs-down.png"
+        },
+        {
+          "url": "https://backblaze.pixellab.ai/file/pixellab-tiles/cff6e754-723a-49f1-878e-f8caf6e7545a/839fbdc2-e555-4370-91d6-914da5974c8e/tile_15.png",
+          "out": "tiles/stairs-up.png"
+        }
+      ]
+    }
+  ],
+  "characters": []
+}

@@ -20,13 +20,16 @@
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "viz": "tsx tools/viz/generate.ts",
-    "loadtest": "pnpm --filter @shattered-dominion/server loadtest"
+    "loadtest": "pnpm --filter @shattered-dominion/server loadtest",
+    "assets:gen": "tsx tools/assets/download.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
+    "@types/pngjs": "^6.0.5",
     "concurrently": "^10.0.3",
     "eslint": "^10.6.0",
     "eslint-config-prettier": "^10.1.8",
+    "pngjs": "^7.0.0",
     "prettier": "^3.9.4",
     "tsx": "^4.23.0",
     "typescript": "^5.9.3",
