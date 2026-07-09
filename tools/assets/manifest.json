@@ -152,14 +152,14 @@
   "characters": [
     {
       "id": "hero",
-      "pixellabId": "ed837fa5-5cbe-46bb-97eb-8ca7337c8697",
-      "prompt": "grizzled bald warrior with big head, dark worn leather armor with teal cloth sash, short sword, tiny stubby body, dungeon crawler (proportions preset chibi — estilo cabeça grande do roguelike clássico)",
-      "canvas": 24,
+      "pixellabId": "d54c7248-6316-4789-b811-4c69ec86ed21",
+      "prompt": "cute chunky dungeon warrior, huge round head, tiny body and short legs, brown tunic with teal sash, gripping a small sword, 16-bit roguelike style, strong black outline (mode v3; walk enfileirado SOZINHO primeiro => pasta 'animating' = walk, garantido por construcao)",
+      "canvas": 28,
       "out": "sprites/hero.png",
-      "zip": "https://api.pixellab.ai/mcp/characters/ed837fa5-5cbe-46bb-97eb-8ca7337c8697/download",
+      "zip": "https://api.pixellab.ai/mcp/characters/d54c7248-6316-4789-b811-4c69ec86ed21/download",
       "animMap": {
         "animating": "walk",
-        "animating-e4e69cb4": "idle",
+        "animating-6121cb13": "idle",
         "cross_punch_attack": "attack",
         "falling_backward": "death"
       },
@@ -169,7 +169,7 @@
       "id": "rat",
       "pixellabId": "5a785db8-f3ec-40ed-a4eb-e214d0308985",
       "prompt": "mangy sewer rat with matted brown fur, long pink tail, hunched and twitchy, beady red eyes (quadruped/cat)",
-      "canvas": 24,
+      "canvas": 28,
       "out": "sprites/rat.png",
       "zip": "https://api.pixellab.ai/mcp/characters/5a785db8-f3ec-40ed-a4eb-e214d0308985/download",
       "animMap": {
@@ -181,7 +181,7 @@
       "id": "crab",
       "pixellabId": "ef8f3fa9-4e51-4a7b-a683-5844e430838f",
       "prompt": "wide flat sewer crab, rust-orange shell, two big raised pincers, many small legs, low squat body",
-      "canvas": 24,
+      "canvas": 28,
       "out": "sprites/crab.png",
       "zip": "https://api.pixellab.ai/mcp/characters/ef8f3fa9-4e51-4a7b-a683-5844e430838f/download",
       "animMap": {
@@ -193,7 +193,7 @@
       "id": "gnoll",
       "pixellabId": "5c5bfff2-cd56-4a1b-b240-7512f9ff5dcc",
       "prompt": "feral jackal-headed scout, tan and olive fur, tattered leather harness, clawed hands, short spear",
-      "canvas": 24,
+      "canvas": 28,
       "out": "sprites/gnoll.png",
       "zip": "https://api.pixellab.ai/mcp/characters/5c5bfff2-cd56-4a1b-b240-7512f9ff5dcc/download",
       "animMap": {

@@ -588,11 +588,17 @@ export class GameScene extends Phaser.Scene {
     const sprite = this.add.sprite(0, 0, texture);
     partes.push(sprite);
 
+    // nome na cor do jogador — reforça a identidade além do tecido do sprite
+    const corDoNome = ehMob
+      ? "#c98a7a"
+      : `#${PLAYER_COLORS[actor.colorIndex % PLAYER_COLORS.length].toString(16).padStart(6, "0")}`;
     const label = this.add
-      .text(0, -14, actor.asleep ? `${actor.name} 💤` : actor.name, {
+      .text(0, -15, actor.asleep ? `${actor.name} 💤` : actor.name, {
         fontFamily: "monospace",
         fontSize: "8px",
-        color: souEu ? "#ffffff" : ehMob ? "#c98a7a" : "#c9c5da",
+        color: corDoNome,
+        stroke: "#0b0a10",
+        strokeThickness: 2,
       })
       .setOrigin(0.5, 1);
     partes.push(label);
