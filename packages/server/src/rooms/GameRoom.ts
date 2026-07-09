@@ -220,6 +220,18 @@ export class GameRoom extends Room {
     }
 
     this.flushVisions(visions);
+
+    // fim de run: o último tick de visão sai antes da tela de resultado
+    const runEnd = this.match.drainRunEnd();
+    if (runEnd) {
+      this.broadcast(MessageType.RunEnded, runEnd);
+      this.state.phase = "ended";
+      console.log(
+        `[GameRoom ${this.roomId}] run terminou em ${runEnd.durationTicks} ticks: ` +
+          (runEnd.victory ? "vitória" : "derrota"),
+      );
+    }
+
     this.tickDurations.push(performance.now() - t0);
     if (this.tickDurations.length > 12_000) this.tickDurations.shift();
   }

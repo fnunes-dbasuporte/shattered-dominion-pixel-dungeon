@@ -38,6 +38,18 @@ import {
   rollTreasureGold,
   TREASURE_BONUS_ITEMS,
   xpToNextLevel,
+  BOSS_ENRAGED_SPEED,
+  CHARGE_DAMAGE_MAX,
+  CHARGE_DAMAGE_MIN,
+  CHARGE_RADIUS,
+  CHARGE_TELEGRAPH_TICKS,
+  MINION_BATCH,
+  bossMaxHp,
+  bossThink,
+  freshBossMind,
+  type BossMind,
+  type RunEndedMessage,
+  type RunPlayerStats,
   type ArmorId,
   type GameEvent,
   type InventoryEntry,
@@ -93,6 +105,9 @@ export interface PlayerActor extends ActorBase {
   equippedArmor: string | null;
   /** envenenado até este tick (0 = saudável). */
   poisonedUntilTick: number;
+  /** contadores da run — vão para a tela de resultado. */
+  kills: number;
+  deaths: number;
   /** online = jogando · dropped = caiu (60s de carência) · dormant = adormecido. */
   conn: "online" | "dropped" | "dormant";
   droppedAtTick: number;
@@ -106,16 +121,19 @@ export interface PlayerActor extends ActorBase {
   lastVisionKey: string;
 }
 
-/** Item ou pilha de ouro no chão — no máximo um por tile. */
+/** Item, pilha de ouro ou o troféu da run no chão — no máximo um por tile. */
 type FloorEntity =
   | { uid: string; x: number; y: number; kind: "item"; item: ItemInstance }
-  | { uid: string; x: number; y: number; kind: "gold"; amount: number };
+  | { uid: string; x: number; y: number; kind: "gold"; amount: number }
+  | { uid: string; x: number; y: number; kind: "amulet" };
 
 const NO_IDENTIFICATION: ReadonlySet<ItemId> = new Set();
 
 export interface MobActor extends ActorBase {
   kind: MobKind;
   mind: MobMind;
+  /** presente apenas no Amálgama de Lodo — troca a IA comum pela de boss. */
+  bossMind?: BossMind;
 }
 
 export type Actor = PlayerActor | MobActor;
@@ -157,6 +175,9 @@ export class Match {
   private pendingEvents: { depth: number; event: GameEvent }[] = [];
   /** jogadores que trocaram de andar neste tick (GameRoom notifica e ressincroniza). */
   private readonly floorChanges = new Map<string, MatchStartedMessage>();
+  /** resultado da run, aguardando o GameRoom drenar (null = run em curso ou já entregue). */
+  private runResult: RunEndedMessage | null = null;
+  private runOver = false;
 
   constructor(level: Level) {
     this.seed = level.seed;
@@ -202,6 +223,12 @@ export class Match {
   }
 
   private populateFloor(floor: Floor): void {
+    // covil do boss: só o Amálgama — sem mobs comuns, sem loot espalhado
+    if (floor.level.bossSpawn) {
+      floor.mobCap = 0;
+      this.spawnBoss(floor);
+      return;
+    }
     floor.mobCap = rollMobCountForDepth(this.rng, floor.level.depth);
     for (let i = 0; i < floor.mobCap; i++) this.trySpawnRandomMob(floor);
     this.populateLoot(floor);
@@ -256,6 +283,8 @@ export class Match {
       equippedWeapon: null,
       equippedArmor: null,
       poisonedUntilTick: 0,
+      kills: 0,
+      deaths: 0,
       conn: "online",
       droppedAtTick: 0,
       wantsDescend: false,
@@ -337,6 +366,7 @@ export class Match {
    * nunca confiar no cliente.
    */
   queueIntent(id: string, dx: unknown, dy: unknown): void {
+    if (this.runOver) return;
     const actor = this.players.get(id);
     if (!actor || !actor.alive || actor.conn !== "online") return;
     if (typeof dx !== "number" || typeof dy !== "number") return;
@@ -352,6 +382,7 @@ export class Match {
    * alterna o voto de descida (se o andar tiver escada ▼).
    */
   stairsAction(id: string): void {
+    if (this.runOver) return;
     const player = this.players.get(id);
     if (!player || !player.alive || player.conn !== "online") return;
     const floor = this.floors.get(player.depth)!;
@@ -526,6 +557,37 @@ export class Match {
     return id;
   }
 
+  /**
+   * O Amálgama de Lodo nasce no covil com os stats BASE do bestiário
+   * (sem escalonamento por andar — os números já são de boss) e HP
+   * escalado pelo tamanho do grupo no momento da criação do andar.
+   */
+  private spawnBoss(floor: Floor): void {
+    const spawn = floor.level.bossSpawn!;
+    const def = MOB_DEFS.boss;
+    const hp = bossMaxHp(Math.max(1, this.players.size));
+    const id = `mob-${++this.mobSeq}`;
+    const boss: MobActor = {
+      kind: "boss",
+      id,
+      name: def.name,
+      x: spawn.x,
+      y: spawn.y,
+      speed: def.speed,
+      nextActionAt: 0,
+      hp,
+      maxHp: hp,
+      accuracy: def.accuracy,
+      evasion: def.evasion,
+      damageMin: def.damageMin,
+      damageMax: def.damageMax,
+      mind: freshMind(),
+      bossMind: freshBossMind(),
+    };
+    floor.mobs.set(id, boss);
+    floor.occupancy.set(floor.level.grid.index(spawn.x, spawn.y), id);
+  }
+
   /** Spawna até n mobs extras no andar inicial (estresse do load test). */
   spawnRandomMobs(n: number): number {
     const floor = this.floors.get(this.startDepth)!;
@@ -538,6 +600,18 @@ export class Match {
   /** Acesso direto ao ator — apenas para preparação de cenários em testes. */
   actorForTest(id: string): Actor | undefined {
     return this.players.get(id) ?? this.findMob(id);
+  }
+
+  /** Teleporta um ator dentro do próprio andar (apenas testes) — ocupação coerente. */
+  placeForTest(id: string, x: number, y: number): void {
+    const actor = this.players.get(id) ?? this.findMob(id);
+    if (!actor) return;
+    const depth = isPlayer(actor) ? actor.depth : this.depthOfMob(actor.id);
+    const floor = this.floors.get(depth)!;
+    floor.occupancy.delete(floor.level.grid.index(actor.x, actor.y));
+    actor.x = x;
+    actor.y = y;
+    floor.occupancy.set(floor.level.grid.index(x, y), actor.id);
   }
 
   /** Posições dos mobs de um andar — apenas para asserções em testes. */
@@ -645,6 +719,12 @@ export class Match {
     const entity = floor.floorEntities.get(uid);
     if (!entity) return;
 
+    if (entity.kind === "amulet") {
+      this.removeFloorEntity(floor, entity);
+      this.info(player, `${player.name} ergueu o Amuleto do Domínio!`);
+      this.endRun(true);
+      return;
+    }
     if (entity.kind === "gold") {
       player.gold += entity.amount;
       this.removeFloorEntity(floor, entity);
@@ -675,6 +755,7 @@ export class Match {
   // ── ações de inventário (validação total no servidor) ─────────────
 
   private livingPlayer(id: string): PlayerActor | null {
+    if (this.runOver) return null;
     const a = this.players.get(id);
     return a && a.alive ? a : null;
   }
@@ -880,6 +961,36 @@ export class Match {
     return null;
   }
 
+  // ── fim de run ─────────────────────────────────────────────────────
+
+  /** true depois que a run terminou (vitória ou derrota). */
+  get isOver(): boolean {
+    return this.runOver;
+  }
+
+  /** Resultado da run — entregue UMA vez ao GameRoom para o broadcast. */
+  drainRunEnd(): RunEndedMessage | null {
+    const out = this.runResult;
+    this.runResult = null;
+    return out;
+  }
+
+  private endRun(victory: boolean): void {
+    if (this.runOver) return;
+    this.runOver = true;
+    const stats: RunPlayerStats[] = [...this.players.values()]
+      .map((p) => ({
+        name: p.name,
+        colorIndex: p.colorIndex,
+        kills: p.kills,
+        deaths: p.deaths,
+        gold: p.gold,
+        level: p.level,
+      }))
+      .sort((a, b) => b.kills - a.kills);
+    this.runResult = { victory, durationTicks: this.tick, stats };
+  }
+
   // ── simulação ──────────────────────────────────────────────────────
 
   /**
@@ -961,6 +1072,10 @@ export class Match {
     mob: MobActor,
     players: { id: string; pos: Vec2; alive: boolean }[],
   ): void {
+    if (mob.bossMind) {
+      this.actBoss(floor, mob, players);
+      return;
+    }
     const grid = floor.level.grid;
     const action = mobThink(mob.mind, {
       grid,
@@ -992,6 +1107,123 @@ export class Match {
     } else {
       mob.nextActionAt = this.tick + Match.IDLE_RETHINK_TICKS;
     }
+  }
+
+  // ── boss ───────────────────────────────────────────────────────────
+
+  private actBoss(
+    floor: Floor,
+    boss: MobActor,
+    players: { id: string; pos: Vec2; alive: boolean }[],
+  ): void {
+    const grid = floor.level.grid;
+    const mind = boss.bossMind!;
+    let minionCount = 0;
+    for (const m of floor.mobs.values()) if (m.kind === "sludge") minionCount++;
+
+    const action = bossThink(mind, {
+      grid,
+      self: boss,
+      tick: this.tick,
+      players,
+      rng: this.rng,
+      isFree: (x, y) => !floor.occupancy.has(grid.index(x, y)),
+      hpFrac: boss.hp / boss.maxHp,
+      minionCount,
+    });
+
+    switch (action.type) {
+      case "move":
+        if (!this.tryMove(floor, boss, action.dir)) {
+          boss.nextActionAt = this.tick + Match.IDLE_RETHINK_TICKS;
+        }
+        return;
+      case "attack": {
+        const target = this.players.get(action.targetId);
+        const adjacente =
+          target && Math.max(Math.abs(target.x - boss.x), Math.abs(target.y - boss.y)) === 1;
+        if (
+          target &&
+          target.depth === floor.level.depth &&
+          target.alive &&
+          target.conn !== "dormant" &&
+          adjacente
+        ) {
+          this.resolveAttack(floor, boss, target);
+        }
+        boss.nextActionAt = this.tick + TICKS_PER_TIME_UNIT;
+        return;
+      }
+      case "startCharge":
+        this.event(floor.level.depth, {
+          type: "telegraph",
+          actorId: boss.id,
+          x: action.center.x,
+          y: action.center.y,
+          ticks: CHARGE_TELEGRAPH_TICKS,
+        });
+        this.info(boss, `${boss.name} infla, prestes a romper!`);
+        boss.nextActionAt = this.tick + 1;
+        return;
+      case "explode":
+        this.explodeCharge(floor, boss, action.center);
+        boss.nextActionAt = this.tick + TICKS_PER_TIME_UNIT;
+        return;
+      case "summon":
+        this.summonMinions(floor, boss);
+        boss.nextActionAt = this.tick + TICKS_PER_TIME_UNIT;
+        return;
+      case "enrage":
+        boss.speed = BOSS_ENRAGED_SPEED;
+        this.info(boss, `${boss.name} entra em fúria!`);
+        boss.nextActionAt = this.tick + 1;
+        return;
+      default:
+        // carregando: reavaliar TODO tick para explodir na hora exata
+        boss.nextActionAt = this.tick + (mind.chargeCenter ? 1 : Match.IDLE_RETHINK_TICKS);
+    }
+  }
+
+  /** Impacto da carga: 3×3 em torno do centro; armadura vale, esquiva não. */
+  private explodeCharge(floor: Floor, boss: MobActor, center: Vec2): void {
+    const depth = floor.level.depth;
+    const rolled = this.rng.nextInt(CHARGE_DAMAGE_MIN, CHARGE_DAMAGE_MAX);
+    for (const p of this.players.values()) {
+      if (p.depth !== depth || !p.alive || p.conn === "dormant") continue;
+      if (Math.max(Math.abs(p.x - center.x), Math.abs(p.y - center.y)) > CHARGE_RADIUS) continue;
+      const damage = applyArmor(this.rng, rolled, this.playerDefense(p));
+      p.hp = Math.max(0, p.hp - damage);
+      this.event(depth, {
+        type: "hit",
+        attackerId: boss.id,
+        attackerName: boss.name,
+        targetId: p.id,
+        targetName: p.name,
+        x: p.x,
+        y: p.y,
+        damage,
+      });
+      if (p.hp === 0) this.onZeroHp(p, boss);
+    }
+  }
+
+  /** Vomita lodos vivos nos tiles livres em volta do boss. */
+  private summonMinions(floor: Floor, boss: MobActor): void {
+    const grid = floor.level.grid;
+    let spawned = 0;
+    for (let dy = -1; dy <= 1 && spawned < MINION_BATCH; dy++) {
+      for (let dx = -1; dx <= 1 && spawned < MINION_BATCH; dx++) {
+        if (dx === 0 && dy === 0) continue;
+        const x = boss.x + dx;
+        const y = boss.y + dy;
+        if (!grid.inBounds(x, y)) continue;
+        const i = grid.index(x, y);
+        if (floor.occupancy.has(i) || !SPAWNABLE.has(grid.tiles[i])) continue;
+        this.spawnMobAt("sludge", x, y, floor.level.depth);
+        spawned++;
+      }
+    }
+    if (spawned > 0) this.info(boss, `${boss.name} vomita lodo vivo!`);
   }
 
   // ── combate ────────────────────────────────────────────────────────
@@ -1049,17 +1281,41 @@ export class Match {
       victim.alive = false;
       victim.intent = null;
       victim.wantsDescend = false;
+      victim.deaths += 1;
+      // derrota: o grupo inteiro caiu
+      if ([...this.players.values()].every((p) => !p.alive)) this.endRun(false);
       return;
     }
 
     floor.mobs.delete(victim.id);
     if (isPlayer(killer)) {
+      killer.kills += 1;
       this.awardXp(killer, scaledMobStats(victim.kind as MobKind, depth).xpReward);
+    }
+
+    if (victim.kind === "boss") {
+      this.dropAmulet(floor, victim);
+      return; // o boss não dropa loot comum
     }
 
     // drop da espécie no tile onde caiu
     const drop = rollMobDrop(this.rng, victim.kind as MobKind);
     if (drop) this.placeLootAtFloor(floor, victim.x, victim.y, drop);
+  }
+
+  /** O troféu da run nasce onde o Amálgama caiu (ou no tile livre mais próximo). */
+  private dropAmulet(floor: Floor, boss: MobActor): void {
+    const spot = this.findItemDropTile(floor, boss) ?? boss;
+    const uid = `item-${++this.itemSeq}`;
+    floor.floorEntities.set(uid, { uid, x: spot.x, y: spot.y, kind: "amulet" });
+    floor.itemsByTile.set(floor.level.grid.index(spot.x, spot.y), uid);
+    this.event(floor.level.depth, {
+      type: "info",
+      actorId: boss.id,
+      text: "O Amuleto do Domínio emerge do lodo!",
+      x: spot.x,
+      y: spot.y,
+    });
   }
 
   /** Rota de dano direta para preparar cenários de morte em testes. */
@@ -1221,22 +1477,39 @@ export class Match {
     const itemsInView: VisibleItem[] = [];
     for (const entity of floor.floorEntities.values()) {
       if (!fov.has(grid.index(entity.x, entity.y))) continue;
-      itemsInView.push({
-        id: entity.uid,
-        x: entity.x,
-        y: entity.y,
-        category: entity.kind === "gold" ? "gold" : itemCategory(entity.item.itemId),
-        icon: entity.kind === "gold" ? "gold" : itemIcon(entity.item.itemId, this.appearances),
-        label:
-          entity.kind === "gold"
-            ? `${entity.amount} moedas`
-            : displayLabel(
-                entity.item.itemId,
-                entity.item.upgrade,
-                player.identified,
-                this.appearances,
-              ),
-      });
+      if (entity.kind === "item") {
+        itemsInView.push({
+          id: entity.uid,
+          x: entity.x,
+          y: entity.y,
+          category: itemCategory(entity.item.itemId),
+          icon: itemIcon(entity.item.itemId, this.appearances),
+          label: displayLabel(
+            entity.item.itemId,
+            entity.item.upgrade,
+            player.identified,
+            this.appearances,
+          ),
+        });
+      } else if (entity.kind === "gold") {
+        itemsInView.push({
+          id: entity.uid,
+          x: entity.x,
+          y: entity.y,
+          category: "gold",
+          icon: "gold",
+          label: `${entity.amount} moedas`,
+        });
+      } else {
+        itemsInView.push({
+          id: entity.uid,
+          x: entity.x,
+          y: entity.y,
+          category: "amulet",
+          icon: "amulet",
+          label: "Amuleto do Domínio",
+        });
+      }
     }
     itemsInView.sort((a, b) => a.id.localeCompare(b.id));
 

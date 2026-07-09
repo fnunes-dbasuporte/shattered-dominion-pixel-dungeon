@@ -1,14 +1,18 @@
 import { describe, expect, it } from "vitest";
 import {
+  BOSS_ENRAGED_SPEED,
+  CHARGE_TELEGRAPH_TICKS,
   Grid,
   RoomType,
   TileType,
+  bossMaxHp,
   generateLevel,
   rectContains,
+  type GameEvent,
   type Level,
   type Vec2,
 } from "@shattered-dominion/shared";
-import { Match } from "./Match.js";
+import { Match, type MobActor } from "./Match.js";
 
 /** Andar sintético: retângulo aberto com borda de parede e spawns dados. */
 function makeTestLevel(spawns: Vec2[], width = 30, height = 12): Level {
@@ -885,5 +889,136 @@ describe("Match — morte de jogador, espectador e revive", () => {
     match.update();
     expect(match.depthOf("a")).toBe(1);
     expect(match.floorEntitiesForTest(1).length).toBe(itensAndar1);
+  });
+});
+
+describe("Match — covil do boss e fim de run", () => {
+  /** No andar 5 o único mob é o Amálgama — devolve o ator dele. */
+  function bossOf(match: Match, depth = 5): MobActor {
+    const id = [...match.mobPositionsForTest(depth).keys()][0];
+    return match.actorForTest(id) as MobActor;
+  }
+
+  it("andar 5 nasce só com o boss no bossSpawn — sem mobs comuns nem loot", () => {
+    const match = Match.fromSeed(11, 5);
+    const boss = bossOf(match);
+    expect(match.mobCount).toBe(1);
+    expect(boss.kind).toBe("boss");
+    expect(boss.maxHp).toBe(bossMaxHp(1));
+    const spawn = generateLevel(match.seed, 5).bossSpawn!;
+    expect({ x: boss.x, y: boss.y }).toEqual(spawn);
+    expect(match.floorItemCount).toBe(0);
+  });
+
+  it("HP do boss escala com o grupo que desceu para o covil", () => {
+    const match = Match.fromSeed(11, 4);
+    match.addPlayer("a", "A");
+    match.addPlayer("b", "B");
+    match.stairsAction("a");
+    match.stairsAction("b"); // 2/2 → desce
+    expect(match.depthOf("a")).toBe(5);
+    expect(bossOf(match).maxHp).toBe(bossMaxHp(2));
+  });
+
+  it("carga telegrafada: atinge quem ficou na área e poupa quem estava longe", () => {
+    const match = Match.fromSeed(21, 5);
+    match.addPlayer("a", "A");
+    match.addPlayer("b", "B");
+    const boss = bossOf(match);
+    match.placeForTest("a", boss.x + 3, boss.y); // no alcance da carga
+    match.placeForTest("b", boss.x + 3, boss.y + 5); // fora da área 3×3
+    boss.bossMind!.nextChargeAt = 0;
+
+    const events: GameEvent[] = [];
+    for (let t = 0; t < CHARGE_TELEGRAPH_TICKS + 2; t++) {
+      const va = match.update().get("a");
+      if (va) events.push(...va.events);
+    }
+
+    expect(events.some((e) => e.type === "telegraph")).toBe(true);
+    const a = match.actorForTest("a")!;
+    const b = match.actorForTest("b")!;
+    expect(a.hp).toBeLessThan(a.maxHp);
+    expect(b.hp).toBe(b.maxHp);
+  });
+
+  it("a carga é esquivável: quem sai da área durante o telegraph não sofre dano", () => {
+    const match = Match.fromSeed(21, 5);
+    match.addPlayer("a", "A");
+    const boss = bossOf(match);
+    match.placeForTest("a", boss.x + 3, boss.y);
+    boss.bossMind!.nextChargeAt = 0;
+
+    for (let t = 0; t < CHARGE_TELEGRAPH_TICKS + 2; t++) {
+      match.queueIntent("a", 1, 0); // corre para longe do centro marcado
+      match.update();
+    }
+    const a = match.actorForTest("a")!;
+    expect(a.hp).toBe(a.maxHp);
+  });
+
+  it("invoca 2 lodos ao lado quando o chamado vence", () => {
+    const match = Match.fromSeed(51, 5);
+    match.addPlayer("a", "A");
+    const boss = bossOf(match);
+    match.placeForTest("a", boss.x + 3, boss.y);
+    boss.bossMind!.nextMinionAt = 0;
+    boss.bossMind!.nextChargeAt = 100_000;
+
+    match.update();
+    const kinds = [...match.mobPositionsForTest(5).keys()].map(
+      (id) => (match.actorForTest(id) as MobActor).kind,
+    );
+    expect(kinds.filter((k) => k === "sludge")).toHaveLength(2);
+  });
+
+  it("abaixo de 50% HP o boss enfurece e acelera", () => {
+    const match = Match.fromSeed(61, 5);
+    match.addPlayer("a", "A");
+    const boss = bossOf(match);
+    match.damageForTest(boss.id, boss.maxHp - 1);
+    match.update();
+    expect(boss.bossMind!.enraged).toBe(true);
+    expect(boss.speed).toBe(BOSS_ENRAGED_SPEED);
+  });
+
+  it("morte do boss dropa o Amuleto; pegá-lo encerra a run em vitória", () => {
+    const match = Match.fromSeed(31, 5);
+    match.addPlayer("a", "A");
+    const boss = bossOf(match);
+    match.damageForTest(boss.id, 9999);
+
+    const amuleto = match.floorEntitiesForTest(5).find((e) => e.kind === "amulet");
+    expect(amuleto).toBeDefined();
+    expect(match.mobPositionsForTest(5).size).toBe(0);
+
+    match.placeForTest("a", amuleto!.x, amuleto!.y);
+    match.pickup("a");
+    expect(match.isOver).toBe(true);
+
+    const fim = match.drainRunEnd()!;
+    expect(fim.victory).toBe(true);
+    expect(fim.stats).toHaveLength(1);
+    expect(fim.stats[0]).toMatchObject({ name: "A", deaths: 0, level: 1 });
+    expect(match.drainRunEnd()).toBeNull(); // entrega única
+
+    // inputs pós-run são ignorados
+    match.queueIntent("a", 1, 0);
+    match.update();
+    expect(match.positionOf("a")).toEqual({ x: amuleto!.x, y: amuleto!.y });
+  });
+
+  it("todos os jogadores mortos = derrota, com mortes contadas", () => {
+    const match = Match.fromSeed(41, 1);
+    match.addPlayer("a", "A");
+    match.addPlayer("b", "B");
+    match.damageForTest("a", 9999);
+    expect(match.isOver).toBe(false); // ainda há um vivo
+    match.damageForTest("b", 9999);
+    expect(match.isOver).toBe(true);
+
+    const fim = match.drainRunEnd()!;
+    expect(fim.victory).toBe(false);
+    expect(fim.stats.map((s) => s.deaths)).toEqual([1, 1]);
   });
 });

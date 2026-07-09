@@ -22,6 +22,8 @@ export const MessageType = {
   Stairs: "stairs",
   /** servidor → cliente: você mudou de andar { width, height, depth } — limpe o mapa local. */
   FloorChanged: "floorChanged",
+  /** servidor → todos: a run terminou (vitória ou derrota) com estatísticas. */
+  RunEnded: "runEnded",
   /** cliente → servidor { t } · servidor devolve Pong { t } — medição de RTT. */
   Ping: "ping",
   Pong: "pong",
@@ -31,7 +33,7 @@ export const MessageType = {
   MatchStarted: "matchStarted",
 } as const;
 
-export type GamePhase = "lobby" | "playing";
+export type GamePhase = "lobby" | "playing" | "ended";
 
 export interface MoveMessage {
   dx: number;
@@ -92,7 +94,7 @@ export interface VisibleItem {
   id: string;
   x: number;
   y: number;
-  category: ItemCategory | "gold";
+  category: ItemCategory | "gold" | "amulet";
   label: string;
   /** slug do ícone (assets/items/<icon>.png). */
   icon: string;
@@ -140,6 +142,8 @@ export type GameEvent =
   | { type: "death"; actorId: string; name: string; x: number; y: number }
   | { type: "levelup"; actorId: string; name: string; level: number; x: number; y: number }
   | { type: "revive"; actorId: string; name: string; x: number; y: number }
+  /** ataque carregado do boss: área 3×3 em torno de (x,y) vai explodir — saia! */
+  | { type: "telegraph"; actorId: string; x: number; y: number; ticks: number }
   /** ações de item e avisos — texto já seguro (usa aparências, não identidades). */
   | { type: "info"; actorId: string; text: string; x: number; y: number };
 
@@ -160,6 +164,23 @@ export interface VisionMessage {
   items: VisibleItem[];
   /** eventos deste tick visíveis a este jogador (ou que o envolvem). */
   events: GameEvent[];
+}
+
+/** Estatísticas finais de um jogador na tela de resultado. */
+export interface RunPlayerStats {
+  name: string;
+  colorIndex: number;
+  kills: number;
+  deaths: number;
+  gold: number;
+  level: number;
+}
+
+export interface RunEndedMessage {
+  victory: boolean;
+  /** duração da run em ticks (10/s). */
+  durationTicks: number;
+  stats: RunPlayerStats[];
 }
 
 export const HERO_SPEED = 1;

@@ -52,5 +52,7 @@ export function rollMobDrop(rng: Rng, kind: MobKind): LootRoll | null {
       return rng.chance(0.3) ? { kind: "gold", amount: rng.nextInt(4, 12) } : null;
     case "crab":
       return rng.chance(0.25) ? { kind: "item", itemId: rng.pick(ALL_POTIONS), upgrade: 0 } : null;
+    default:
+      return null; // lodo não carrega nada; o boss dropa o Amuleto (regra do Match)
   }
 }
