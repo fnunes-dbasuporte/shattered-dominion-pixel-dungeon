@@ -1,6 +1,6 @@
 {
   "version": 1,
-  "note": "Assets gerados via Pixellab (MCP). Cada entrada guarda o ID do job, o prompt exato e as URLs de origem. pnpm assets:gen baixa tudo que faltar em packages/client/public/assets/.",
+  "note": "Assets gerados via Pixellab (MCP). Cada entrada guarda o ID do job, o prompt exato e as URLs de origem. pnpm assets:gen baixa tudo que faltar em packages/client/public/assets/. O HERÓI é artesanal (tools/assets/hero-pixel.ts), não vem do Pixellab.",
   "assets": [
     {
       "id": "tileset-sewers",
@@ -150,21 +150,6 @@
     }
   ],
   "characters": [
-    {
-      "id": "hero",
-      "pixellabId": "d54c7248-6316-4789-b811-4c69ec86ed21",
-      "prompt": "cute chunky dungeon warrior, huge round head, tiny body and short legs, brown tunic with teal sash, gripping a small sword, 16-bit roguelike style, strong black outline (mode v3; walk enfileirado SOZINHO primeiro => pasta 'animating' = walk, garantido por construcao)",
-      "canvas": 28,
-      "out": "sprites/hero.png",
-      "zip": "https://api.pixellab.ai/mcp/characters/d54c7248-6316-4789-b811-4c69ec86ed21/download",
-      "animMap": {
-        "animating": "walk",
-        "animating-6121cb13": "idle",
-        "cross_punch_attack": "attack",
-        "falling_backward": "death"
-      },
-      "recolor": true
-    },
     {
       "id": "rat",
       "pixellabId": "5a785db8-f3ec-40ed-a4eb-e214d0308985",

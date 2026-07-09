@@ -21,7 +21,8 @@
     "format": "prettier --write .",
     "viz": "tsx tools/viz/generate.ts",
     "loadtest": "pnpm --filter @shattered-dominion/server loadtest",
-    "assets:gen": "tsx tools/assets/download.ts"
+    "assets:gen": "tsx tools/assets/download.ts && tsx tools/assets/hero-pixel.ts",
+    "assets:hero": "tsx tools/assets/hero-pixel.ts"
   },
   "devDependencies": {
     "@eslint/js": "^10.0.1",
