@@ -5,53 +5,53 @@
     {
       "id": "tileset-sewers",
       "kind": "tiles",
-      "pixellabId": "839fbdc2-e555-4370-91d6-914da5974c8e",
-      "prompt": "1). dark mossy stone brick wall 2). grey flagstone floor 3). cracked grey flagstone floor 4). moss-stained flagstone floor 5). murky green sewage water 6). sickly pale weeds growing between stones 7). smoldering orange embers on scorched stone 8). rotten wooden door closed, iron bands 9). stone stairs descending into darkness 10). stone stairs ascending with faint light",
+      "pixellabId": "edb4b30c-cfe3-487d-9818-876051817117",
+      "prompt": "1). dark mossy stone brick wall 2). grey flagstone floor 3). cracked grey flagstone floor 4). moss-stained flagstone floor 5). murky green sewage water 6). sickly pale weeds growing between stones 7). smoldering orange embers on scorched stone 8). rotten wooden door closed, iron bands 9). stone stairs descending into darkness 10). stone stairs ascending with faint light — crisp pixels, limited muted fantasy palette, no antialiasing, no gradients, 16-bit dungeon crawler style",
       "params": {
         "tile_type": "square_topdown",
-        "tile_size": 16,
+        "tile_size": 32,
         "tile_view": "top-down",
         "outline_mode": "segmentation"
       },
       "files": [
         {
-          "url": "https://backblaze.pixellab.ai/file/pixellab-tiles/cff6e754-723a-49f1-878e-f8caf6e7545a/839fbdc2-e555-4370-91d6-914da5974c8e/tile_0.png",
+          "url": "https://backblaze.pixellab.ai/file/pixellab-tiles/cff6e754-723a-49f1-878e-f8caf6e7545a/edb4b30c-cfe3-487d-9818-876051817117/tile_0.png",
           "out": "tiles/wall.png"
         },
         {
-          "url": "https://backblaze.pixellab.ai/file/pixellab-tiles/cff6e754-723a-49f1-878e-f8caf6e7545a/839fbdc2-e555-4370-91d6-914da5974c8e/tile_1.png",
+          "url": "https://backblaze.pixellab.ai/file/pixellab-tiles/cff6e754-723a-49f1-878e-f8caf6e7545a/edb4b30c-cfe3-487d-9818-876051817117/tile_1.png",
           "out": "tiles/floor-1.png"
         },
         {
-          "url": "https://backblaze.pixellab.ai/file/pixellab-tiles/cff6e754-723a-49f1-878e-f8caf6e7545a/839fbdc2-e555-4370-91d6-914da5974c8e/tile_2.png",
+          "url": "https://backblaze.pixellab.ai/file/pixellab-tiles/cff6e754-723a-49f1-878e-f8caf6e7545a/edb4b30c-cfe3-487d-9818-876051817117/tile_2.png",
           "out": "tiles/floor-2.png"
         },
         {
-          "url": "https://backblaze.pixellab.ai/file/pixellab-tiles/cff6e754-723a-49f1-878e-f8caf6e7545a/839fbdc2-e555-4370-91d6-914da5974c8e/tile_3.png",
+          "url": "https://backblaze.pixellab.ai/file/pixellab-tiles/cff6e754-723a-49f1-878e-f8caf6e7545a/edb4b30c-cfe3-487d-9818-876051817117/tile_8.png",
           "out": "tiles/floor-3.png"
         },
         {
-          "url": "https://backblaze.pixellab.ai/file/pixellab-tiles/cff6e754-723a-49f1-878e-f8caf6e7545a/839fbdc2-e555-4370-91d6-914da5974c8e/tile_4.png",
+          "url": "https://backblaze.pixellab.ai/file/pixellab-tiles/cff6e754-723a-49f1-878e-f8caf6e7545a/edb4b30c-cfe3-487d-9818-876051817117/tile_6.png",
           "out": "tiles/water.png"
         },
         {
-          "url": "https://backblaze.pixellab.ai/file/pixellab-tiles/cff6e754-723a-49f1-878e-f8caf6e7545a/839fbdc2-e555-4370-91d6-914da5974c8e/tile_10.png",
+          "url": "https://backblaze.pixellab.ai/file/pixellab-tiles/cff6e754-723a-49f1-878e-f8caf6e7545a/edb4b30c-cfe3-487d-9818-876051817117/tile_9.png",
           "out": "tiles/grass.png"
         },
         {
-          "url": "https://backblaze.pixellab.ai/file/pixellab-tiles/cff6e754-723a-49f1-878e-f8caf6e7545a/839fbdc2-e555-4370-91d6-914da5974c8e/tile_11.png",
+          "url": "https://backblaze.pixellab.ai/file/pixellab-tiles/cff6e754-723a-49f1-878e-f8caf6e7545a/edb4b30c-cfe3-487d-9818-876051817117/tile_7.png",
           "out": "tiles/embers.png"
         },
         {
-          "url": "https://backblaze.pixellab.ai/file/pixellab-tiles/cff6e754-723a-49f1-878e-f8caf6e7545a/839fbdc2-e555-4370-91d6-914da5974c8e/tile_13.png",
+          "url": "https://backblaze.pixellab.ai/file/pixellab-tiles/cff6e754-723a-49f1-878e-f8caf6e7545a/edb4b30c-cfe3-487d-9818-876051817117/tile_3.png",
           "out": "tiles/door.png"
         },
         {
-          "url": "https://backblaze.pixellab.ai/file/pixellab-tiles/cff6e754-723a-49f1-878e-f8caf6e7545a/839fbdc2-e555-4370-91d6-914da5974c8e/tile_14.png",
+          "url": "https://backblaze.pixellab.ai/file/pixellab-tiles/cff6e754-723a-49f1-878e-f8caf6e7545a/edb4b30c-cfe3-487d-9818-876051817117/tile_11.png",
           "out": "tiles/stairs-down.png"
         },
         {
-          "url": "https://backblaze.pixellab.ai/file/pixellab-tiles/cff6e754-723a-49f1-878e-f8caf6e7545a/839fbdc2-e555-4370-91d6-914da5974c8e/tile_15.png",
+          "url": "https://backblaze.pixellab.ai/file/pixellab-tiles/cff6e754-723a-49f1-878e-f8caf6e7545a/edb4b30c-cfe3-487d-9818-876051817117/tile_15.png",
           "out": "tiles/stairs-up.png"
         }
       ]
@@ -151,10 +151,26 @@
   ],
   "characters": [
     {
+      "id": "hero",
+      "pixellabId": "a99d5d17-4e44-4b29-88c7-2d9d82710758",
+      "prompt": "Create one game-ready 32x32 pixel-art RPG hero sprite inspired by classic Pixel Dungeon / Shattered Pixel Dungeon roguelike characters. A grizzled human warrior gripping a short sword, worn leather armor with a teal cloth sash. Style: tiny 16-bit dungeon crawler sprite, front-facing idle pose, slight 3/4 top-down view, transparent background, crisp pixels, 1-pixel dark outline, limited muted fantasy palette, chibi proportions, large square head, small body, short legs, simple black pixel eyes, no mouth, no antialiasing, no gradients, no blur, no text, no logo, no background. The sprite must be readable at very small size and look like an in-game roguelike asset. (prompt do Felipe; mode v3, 32px; walk enfileirado sozinho primeiro)",
+      "canvas": 56,
+      "out": "sprites/hero.png",
+      "zip": "https://api.pixellab.ai/mcp/characters/a99d5d17-4e44-4b29-88c7-2d9d82710758/download",
+      "animMap": {
+        "animating": "walk",
+        "animating-bf6609fd": "idle",
+        "cross_punch_attack": "attack",
+        "falling_backward": "death"
+      },
+      "recolor": true
+    },
+    {
       "id": "rat",
       "pixellabId": "5a785db8-f3ec-40ed-a4eb-e214d0308985",
-      "prompt": "mangy sewer rat with matted brown fur, long pink tail, hunched and twitchy, beady red eyes (quadruped/cat)",
-      "canvas": 28,
+      "prompt": "mangy sewer rat with matted brown fur, long pink tail, hunched and twitchy, beady red eyes (quadruped/cat, 16px upscale 2x — nativo 32px pendente: geracoes de rato 32 falharam/travaram 3x no Pixellab)",
+      "canvas": 56,
+      "scale": 2,
       "out": "sprites/rat.png",
       "zip": "https://api.pixellab.ai/mcp/characters/5a785db8-f3ec-40ed-a4eb-e214d0308985/download",
       "animMap": {
@@ -163,24 +179,24 @@
       }
     },
     {
-      "id": "crab",
-      "pixellabId": "ef8f3fa9-4e51-4a7b-a683-5844e430838f",
-      "prompt": "wide flat sewer crab, rust-orange shell, two big raised pincers, many small legs, low squat body",
-      "canvas": 28,
-      "out": "sprites/crab.png",
-      "zip": "https://api.pixellab.ai/mcp/characters/ef8f3fa9-4e51-4a7b-a683-5844e430838f/download",
+      "id": "gnoll",
+      "pixellabId": "7bf2bdb8-5695-40bb-86e7-c77d24860e17",
+      "prompt": "Create one game-ready 32x32 pixel-art RPG monster sprite inspired by classic roguelike dungeon crawlers. A feral jackal-headed scout with tan and olive fur, tattered leather harness, clawed hands, short spear. Style: tiny 16-bit dungeon crawler sprite, slight 3/4 top-down view, crisp pixels, 1-pixel dark outline, limited muted fantasy palette, chibi proportions, no antialiasing. (mode v3 32px)",
+      "canvas": 56,
+      "out": "sprites/gnoll.png",
+      "zip": "https://api.pixellab.ai/mcp/characters/7bf2bdb8-5695-40bb-86e7-c77d24860e17/download",
       "animMap": {
         "animating": "walk",
         "cross_punch_attack": "attack"
       }
     },
     {
-      "id": "gnoll",
-      "pixellabId": "5c5bfff2-cd56-4a1b-b240-7512f9ff5dcc",
-      "prompt": "feral jackal-headed scout, tan and olive fur, tattered leather harness, clawed hands, short spear",
-      "canvas": 28,
-      "out": "sprites/gnoll.png",
-      "zip": "https://api.pixellab.ai/mcp/characters/5c5bfff2-cd56-4a1b-b240-7512f9ff5dcc/download",
+      "id": "crab",
+      "pixellabId": "ae28c700-ae69-4edb-948c-4236330adfe7",
+      "prompt": "Create one game-ready 32x32 pixel-art RPG monster sprite inspired by classic roguelike dungeon crawlers. A wide flat sewer crab with rust-orange shell, two big raised pincers, many small legs, low squat body. Style: tiny 16-bit dungeon crawler sprite, slight 3/4 top-down view, crisp pixels, 1-pixel dark outline, limited muted fantasy palette, no antialiasing. (mode v3 32px)",
+      "canvas": 56,
+      "out": "sprites/crab.png",
+      "zip": "https://api.pixellab.ai/mcp/characters/ae28c700-ae69-4edb-948c-4236330adfe7/download",
       "animMap": {
         "animating": "walk",
         "cross_punch_attack": "attack"

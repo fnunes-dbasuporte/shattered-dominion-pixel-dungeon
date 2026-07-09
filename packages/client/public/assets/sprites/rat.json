@@ -1,6 +1,6 @@
 {
-  "frameWidth": 28,
-  "frameHeight": 28,
+  "frameWidth": 56,
+  "frameHeight": 56,
   "columns": 7,
   "rows": {
     "still-south": {

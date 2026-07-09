@@ -41,7 +41,7 @@ export const ITEM_ICONS = [
   "ankh",
 ];
 
-export const TILE_PX = 16;
+export const TILE_PX = 32;
 
 /** Texturas por TileType (chão tem 3 variações escolhidas por hash do índice). */
 const TILE_TEXTURES: Record<number, string[]> = {
@@ -149,7 +149,7 @@ export class GameScene extends Phaser.Scene {
     const w = this.grid.width * TILE_PX;
     const h = this.grid.height * TILE_PX;
     this.cameras.main.setBounds(0, 0, w, h);
-    this.cameras.main.setZoom(3);
+    this.cameras.main.setZoom(2);
     this.cameras.main.setBackgroundColor("#0b0a10");
 
     this.topText = this.add
@@ -240,7 +240,7 @@ export class GameScene extends Phaser.Scene {
     this.balloons.get(actorId)?.destroy();
     const curto = text.length > 26 ? `${text.slice(0, 26)}…` : text;
     const balloon = this.add
-      .text(0, -TILE_PX - 4, curto, {
+      .text(0, -TILE_PX + 2, curto, {
         fontFamily: "monospace",
         fontSize: "10px",
         color: "#0b0a10",
@@ -350,7 +350,7 @@ export class GameScene extends Phaser.Scene {
       const texture = this.textures.exists(`item-${item.icon}`) ? `item-${item.icon}` : "item-gold";
       const img = this.add
         .image(tileToWorld(item.x), tileToWorld(item.y), texture)
-        .setDisplaySize(12, 12)
+        .setDisplaySize(24, 24)
         .setDepth(6);
       this.itensChao.set(item.id, img);
     }
@@ -405,12 +405,12 @@ export class GameScene extends Phaser.Scene {
         case "death":
           dying.add(e.actorId);
           if (!e.actorId.startsWith("mob-")) this.floatingText(e.x, e.y, "✝", "#e8554d");
-          this.spawnEffect("fx-poof", e.x, e.y, { from: 5, to: 16, duration: 380 });
+          this.spawnEffect("fx-poof", e.x, e.y, { from: 10, to: 32, duration: 380 });
           this.pushLog(e.actorId === this.conn.sessionId ? "VOCÊ morreu!" : `${e.name} morreu`);
           break;
         case "levelup":
           this.floatingText(e.x, e.y, `Nível ${e.level}!`, "#5fce6b");
-          this.spawnEffect("fx-sparkle", e.x, e.y, { from: 8, to: 20, duration: 550, rise: 6 });
+          this.spawnEffect("fx-sparkle", e.x, e.y, { from: 16, to: 40, duration: 550, rise: 12 });
           this.pushLog(`${e.name} subiu para o nível ${e.level}`);
           break;
         case "revive":
@@ -431,7 +431,7 @@ export class GameScene extends Phaser.Scene {
     const angle = atk ? Math.atan2(targetY - atk.y, targetX - atk.x) : 0;
     const img = this.add
       .image(tileToWorld(targetX), tileToWorld(targetY), "fx-slash")
-      .setDisplaySize(13, 13)
+      .setDisplaySize(26, 26)
       .setRotation(angle)
       .setAlpha(0.95)
       .setDepth(30);
@@ -582,7 +582,7 @@ export class GameScene extends Phaser.Scene {
     const partes: Phaser.GameObjects.GameObject[] = [];
     if (souEu) {
       // anel sob os pés marca o próprio herói
-      partes.push(this.add.ellipse(0, 7, 14, 6).setStrokeStyle(1, 0xffffff, 0.85));
+      partes.push(this.add.ellipse(0, 14, 26, 10).setStrokeStyle(1, 0xffffff, 0.85));
     }
 
     const sprite = this.add.sprite(0, 0, texture);
@@ -593,9 +593,9 @@ export class GameScene extends Phaser.Scene {
       ? "#c98a7a"
       : `#${PLAYER_COLORS[actor.colorIndex % PLAYER_COLORS.length].toString(16).padStart(6, "0")}`;
     const label = this.add
-      .text(0, -15, actor.asleep ? `${actor.name} 💤` : actor.name, {
+      .text(0, -26, actor.asleep ? `${actor.name} 💤` : actor.name, {
         fontFamily: "monospace",
-        fontSize: "8px",
+        fontSize: "10px",
         color: corDoNome,
         stroke: "#0b0a10",
         strokeThickness: 2,
@@ -634,12 +634,12 @@ export class GameScene extends Phaser.Scene {
     const g = sprite.hpBar;
     g.clear();
     if (actor.hp >= actor.maxHp) return;
-    const w = 16;
+    const w = 28;
     const frac = actor.hp / actor.maxHp;
     g.fillStyle(0x0b0a10, 0.8);
-    g.fillRect(-w / 2, -13, w, 2);
+    g.fillRect(-w / 2, -23, w, 3);
     g.fillStyle(frac > 0.5 ? 0x5fce6b : frac > 0.25 ? 0xe8c04d : 0xe8554d);
-    g.fillRect(-w / 2, -13, w * frac, 2);
+    g.fillRect(-w / 2, -23, w * frac, 3);
   }
 
   // ── HUD ──────────────────────────────────────────────────────────────

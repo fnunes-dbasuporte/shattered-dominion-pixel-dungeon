@@ -24,6 +24,8 @@ export interface CharacterEntry {
   animMap: Record<string, string>;
   /** gera 8 variações de cor re-matizadas (paleta dos jogadores). */
   recolor?: boolean;
+  /** upscale inteiro (nearest) aplicado a cada frame antes de compor. */
+  scale?: number;
 }
 
 interface ZipMetadata {
@@ -92,7 +94,8 @@ export async function composeCharacter(entry: CharacterEntry, force: boolean): P
     for (let c = 0; c < rows[r].paths.length; c++) {
       const data = files[rows[r].paths[c]];
       if (!data) throw new Error(`${entry.id}: ${rows[r].paths[c]} ausente no zip`);
-      const frame = PNG.sync.read(Buffer.from(data));
+      let frame = PNG.sync.read(Buffer.from(data));
+      if (entry.scale && entry.scale > 1) frame = nearestScale(frame, entry.scale);
       if (frame.width > size || frame.height > size) {
         throw new Error(
           `${entry.id}/${rows[r].name}[${c}]: frame ${frame.width}x${frame.height} maior que o canvas ${size}`,
@@ -136,6 +139,22 @@ function recolorSheet(entry: CharacterEntry, base: PNG, sheetPath: string): void
     writeFileSync(variantPath, PNG.sync.write(out));
   }
   console.log(`recolor  ${entry.id} → 8 variações de cor`);
+}
+
+/** Upscale inteiro sem interpolação — preserva os pixels. */
+function nearestScale(src: PNG, k: number): PNG {
+  const out = new PNG({ width: src.width * k, height: src.height * k });
+  for (let y = 0; y < out.height; y++) {
+    for (let x = 0; x < out.width; x++) {
+      const si = ((Math.floor(y / k) * src.width + Math.floor(x / k)) * 4) | 0;
+      const di = (y * out.width + x) * 4;
+      out.data[di] = src.data[si];
+      out.data[di + 1] = src.data[si + 1];
+      out.data[di + 2] = src.data[si + 2];
+      out.data[di + 3] = src.data[si + 3];
+    }
+  }
+  return out;
 }
 
 function rgbToHsl(r: number, g: number, b: number): [number, number, number] {

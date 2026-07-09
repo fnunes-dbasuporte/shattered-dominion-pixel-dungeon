@@ -8,8 +8,8 @@ export interface SheetMeta {
   rows: Record<string, { row: number; count: number }>;
 }
 
-/** Canvas padrão dos personagens 16px do Pixellab (v3 usa 28; menores são centralizados). */
-export const CHAR_CANVAS = 28;
+/** Canvas padrão dos personagens 32px do Pixellab (v3 usa 56; menores são centralizados). */
+export const CHAR_CANVAS = 56;
 
 /** hero-0..7 compartilham o meta de "hero"; mobs têm sheet própria. */
 const HERO_VARIANTS = Array.from({ length: 8 }, (_, i) => `hero-${i}`);
