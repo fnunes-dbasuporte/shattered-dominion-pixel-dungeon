@@ -26,6 +26,11 @@ jobs:
       - name: instalar dependências
         run: pnpm install --frozen-lockfile
 
+      # os testes do server resolvem @shattered-dominion/shared pelo exports
+      # (dist/) — o pacote precisa estar compilado antes de lint/test
+      - name: build do shared
+        run: pnpm --filter @shattered-dominion/shared build
+
       - name: lint
         run: pnpm lint
 
