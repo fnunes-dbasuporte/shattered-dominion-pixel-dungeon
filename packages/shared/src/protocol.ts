@@ -18,6 +18,10 @@ export const MessageType = {
   Drop: "drop",
   /** cliente → servidor { text } · servidor → todos { senderId, name, text }. */
   Chat: "chat",
+  /** cliente → servidor: interagir com escadas — sobe se estiver na ▲, senão alterna voto de descida. */
+  Stairs: "stairs",
+  /** servidor → cliente: você mudou de andar { width, height, depth } — limpe o mapa local. */
+  FloorChanged: "floorChanged",
   /** cliente → servidor { t } · servidor devolve Pong { t } — medição de RTT. */
   Ping: "ping",
   Pong: "pong",
@@ -141,6 +145,10 @@ export type GameEvent =
 
 export interface VisionMessage {
   tick: number;
+  /** andar em que VOCÊ está. */
+  depth: number;
+  /** votos de descida no seu andar (null quando não há escada ▼ ou ninguém votou). */
+  descent: { votes: number; needed: number } | null;
   you: YouState;
   /** índices dos tiles visíveis agora. */
   visible: number[];

@@ -131,6 +131,15 @@ export class GameConnection {
     this.room.send(MessageType.Chat, { text });
   }
 
+  /** Interage com escadas: sobe (na ▲) ou alterna o voto de descida. */
+  sendStairs(): void {
+    this.room.send(MessageType.Stairs);
+  }
+
+  onFloorChanged(cb: (msg: MatchStartedMessage) => void): void {
+    this.room.onMessage(MessageType.FloorChanged, cb);
+  }
+
   onChat(cb: (c: ChatBroadcast) => void): void {
     this.chatHandler = cb;
     const queued = this.pendingChats;

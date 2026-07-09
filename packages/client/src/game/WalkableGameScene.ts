@@ -32,6 +32,10 @@ export class WalkableGameScene extends GameScene {
     this.cancelarCaminho();
   }
 
+  protected override onFloorReset(): void {
+    this.cancelarCaminho();
+  }
+
   protected override onVisionExtra(v: VisionMessage, newActorIds: string[]): void {
     if (!v.you.alive) {
       this.cancelarCaminho(); // morto não caminha

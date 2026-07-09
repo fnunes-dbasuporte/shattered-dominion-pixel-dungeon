@@ -12,6 +12,7 @@ import {
   type YouState,
 } from "@shattered-dominion/shared";
 import type { GameConnection } from "../net/connection.js";
+
 import { InventoryPanel } from "../ui/inventory.js";
 import { ChatBox } from "../ui/chat.js";
 import {
@@ -117,6 +118,8 @@ export class GameScene extends Phaser.Scene {
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private lastSentAt = 0;
   private lastSentDir = "";
+  private currentDepth = 1;
+  private descent: { votes: number; needed: number } | null = null;
   /** compensação de jitter: visões seguram até 2 ticks (200ms) antes de aplicar. */
   private visionQueue: { v: VisionMessage; at: number }[] = [];
 
@@ -218,6 +221,10 @@ export class GameScene extends Phaser.Scene {
     this.input.keyboard!.on("keydown-ENTER", () => {
       if (!this.invPanel.isOpen) this.chat.open();
     });
+    this.input.keyboard!.on("keydown-G", () => {
+      if (this.you.alive) this.conn.sendStairs();
+    });
+    this.conn.onFloorChanged((msg) => this.resetFloor(msg));
     this.conn.onChat((c) => {
       this.pushLog(`${c.name}: ${c.text}`);
       this.showBalloon(c.senderId, c.text);
@@ -232,6 +239,27 @@ export class GameScene extends Phaser.Scene {
     this.reposicionarUi(); // reposiciona incluindo o statusText recém-criado
     this.conn.onVision((v) => this.visionQueue.push({ v, at: performance.now() }));
   }
+
+  /** Troca de andar: limpa todo o estado visual e recomeça no novo grid. */
+  private resetFloor(msg: MatchStartedMessage): void {
+    this.grid = new Grid(msg.width, msg.height);
+    this.discovered.clear();
+    this.visibleNow.clear();
+    this.visionQueue = [];
+    for (const sprite of this.tileSprites.values()) sprite.destroy();
+    this.tileSprites.clear();
+    for (const actor of this.atores.values()) actor.container.destroy();
+    this.atores.clear();
+    for (const img of this.itensChao.values()) img.destroy();
+    this.itensChao.clear();
+    this.balloons.clear();
+    this.currentDepth = msg.depth;
+    this.pushLog(`— andar ${msg.depth} —`);
+    this.onFloorReset();
+  }
+
+  /** Hook para subclasses limparem estado dependente do andar. */
+  protected onFloorReset(): void {}
 
   /** Balão curto sobre o herói; some após 4s (morre junto se o ator sair do FOV). */
   private showBalloon(actorId: string, text: string): void {
@@ -324,6 +352,8 @@ export class GameScene extends Phaser.Scene {
     }
     this.visibleNow = new Set(v.visible);
     this.you = v.you;
+    this.currentDepth = v.depth;
+    this.descent = v.descent;
 
     this.redrawMap();
     const dyingIds = this.processEvents(v.events);

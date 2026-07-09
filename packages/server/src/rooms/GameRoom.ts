@@ -61,6 +61,9 @@ export class GameRoom extends Room {
       const p = (payload ?? {}) as { dx?: unknown; dy?: unknown };
       this.match.queueIntent(client.sessionId, p.dx, p.dy);
     });
+    this.onMessage(MessageType.Stairs, (client) => {
+      if (this.state.phase === "playing") this.match?.stairsAction(client.sessionId);
+    });
     this.onMessage(MessageType.Pickup, (client) => {
       if (this.state.phase === "playing") this.match?.pickup(client.sessionId);
     });
@@ -204,7 +207,19 @@ export class GameRoom extends Room {
   tickUpdate(): void {
     if (this.state.phase !== "playing" || !this.match) return;
     const t0 = performance.now();
-    this.flushVisions(this.match.update());
+    const visions = this.match.update();
+
+    // trocas de andar: avisa o cliente para resetar o mapa e ressincroniza
+    for (const [sessionId, msg] of this.match.drainFloorChanges()) {
+      const client = this.clients.find((c) => c.sessionId === sessionId);
+      if (!client) continue;
+      client.send(MessageType.FloorChanged, msg);
+      const full = this.match.fullVisionFor(sessionId);
+      if (full) client.send(MessageType.Vision, full);
+      visions.delete(sessionId); // a visão completa substitui a incremental
+    }
+
+    this.flushVisions(visions);
     this.tickDurations.push(performance.now() - t0);
     if (this.tickDurations.length > 12_000) this.tickDurations.shift();
   }

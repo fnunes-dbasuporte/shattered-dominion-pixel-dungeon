@@ -3,6 +3,7 @@ import {
   Grid,
   RoomType,
   TileType,
+  generateLevel,
   rectContains,
   type Level,
   type Vec2,
@@ -752,7 +753,7 @@ describe("Match — queda, dormência e reconexão", () => {
 
     const a = match.actorForTest("a")!;
     if (a.kind !== "player") throw new Error();
-    const memoria = a.discovered.size;
+    const memoria = a.discovered.get(a.depth)!.size;
     expect(memoria).toBeGreaterThan(0);
 
     const full = match.fullVisionFor("a")!;
@@ -808,50 +809,81 @@ describe("Match — morte de jogador, espectador e revive", () => {
     expect(ids).not.toContain("a"); // fantasma
   });
 
-  it("aliado pisando na escada de descida revive o morto com 50% do HP", () => {
-    // andar pequeno: escada de descida em (6,6)
-    const match = new Match(
-      makeTestLevel(
-        [
-          { x: 2, y: 2 },
-          { x: 3, y: 2 },
-        ],
-        8,
-        8,
-      ),
-    );
+  it("descida em grupo revive o morto com 50% do HP no novo andar", () => {
+    const match = Match.fromSeed(42, 1);
     match.addPlayer("a", "A");
     match.addPlayer("b", "B");
     match.damageForTest("a", 999);
     match.update();
 
-    // B caminha até a escada (6,6), um passo guiado por vez
-    const eventos: { type: string }[] = [];
-    let atoresVistosPorB: string[] = [];
-    for (let passo = 0; passo < 8; passo++) {
-      const pos = match.positionOf("b")!;
-      if (pos.x === 6 && pos.y === 6) break;
-      match.queueIntent("b", Math.sign(6 - pos.x), Math.sign(6 - pos.y));
-      for (let t = 0; t < 12; t++) {
-        const v = match.update().get("b");
-        if (v) {
-          eventos.push(...v.events);
-          atoresVistosPorB = v.actors.map((x) => x.id);
-        }
-      }
-    }
-    expect(match.positionOf("b")).toEqual({ x: 6, y: 6 });
-    expect(eventos.some((e) => e.type === "revive")).toBe(true);
+    // B (único vivo) vota descer → grupo desce, A revive no andar 2
+    match.stairsAction("b");
+    const out = match.update();
+
+    expect(match.depthOf("a")).toBe(2);
+    expect(match.depthOf("b")).toBe(2);
+    const changes = match.drainFloorChanges();
+    expect(changes.has("a")).toBe(true);
+    expect(changes.get("b")).toMatchObject({ depth: 2 });
 
     const a = match.actorForTest("a")!;
-    expect(a.kind).toBe("player");
-    if (a.kind === "player") expect(a.alive).toBe(true);
+    if (a.kind !== "player") throw new Error();
+    expect(a.alive).toBe(true);
     expect(a.hp).toBe(10); // 50% de 20
-    // renasceu perto da escada
-    const dist = Math.max(Math.abs(a.x - 6), Math.abs(a.y - 6));
-    expect(dist).toBeLessThanOrEqual(2);
+    expect(out.size).toBeGreaterThan(0);
+  });
 
-    // e voltou a aparecer como ator na visão do aliado
-    expect(atoresVistosPorB).toContain("a");
+  it("voto de descida exige todos os vivos do andar; retirar voto cancela", () => {
+    const match = Match.fromSeed(42, 1);
+    match.addPlayer("a", "A");
+    match.addPlayer("b", "B");
+    match.update();
+
+    match.stairsAction("a"); // 1/2 votos
+    match.update();
+    expect(match.depthOf("a")).toBe(1);
+    expect(match.descentVotes(1)).toEqual({ votes: 1, needed: 2 });
+
+    match.stairsAction("a"); // retira o voto
+    expect(match.descentVotes(1)).toEqual({ votes: 0, needed: 2 });
+
+    match.stairsAction("a");
+    match.stairsAction("b"); // 2/2 → desce
+    expect(match.depthOf("a")).toBe(2);
+    expect(match.depthOf("b")).toBe(2);
+    // votos limpos no novo andar
+    expect(match.descentVotes(2)).toEqual({ votes: 0, needed: 2 });
+  });
+
+  it("andares persistem: item dropado continua lá ao voltar pela escada ▲", () => {
+    const match = Match.fromSeed(7, 1);
+    match.addPlayer("a", "A");
+    match.placeLootAt(match.level.stairsUp.x + 1, match.level.stairsUp.y, {
+      kind: "item",
+      itemId: "mace",
+      upgrade: 0,
+    });
+    const itensAndar1 = match.floorEntitiesForTest(1).length;
+    match.update();
+
+    match.stairsAction("a"); // desce sozinho (1/1)
+    match.update();
+    expect(match.depthOf("a")).toBe(2);
+    match.drainFloorChanges();
+
+    // volta: caminha guiado até a escada ▲ do andar 2 (nasce ao lado dela)
+    const alvo = generateLevel(match.seed, 2).stairsUp;
+    for (let passo = 0; passo < 40; passo++) {
+      const pos = match.positionOf("a")!;
+      if (pos.x === alvo.x && pos.y === alvo.y) break;
+      match.queueIntent("a", Math.sign(alvo.x - pos.x), Math.sign(alvo.y - pos.y));
+      for (let t = 0; t < 12; t++) match.update();
+    }
+    expect(match.positionOf("a")).toEqual(alvo);
+
+    match.stairsAction("a"); // sobe
+    match.update();
+    expect(match.depthOf("a")).toBe(1);
+    expect(match.floorEntitiesForTest(1).length).toBe(itensAndar1);
   });
 });
