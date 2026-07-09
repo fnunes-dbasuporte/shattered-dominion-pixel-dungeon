@@ -4,7 +4,13 @@ import { WebSocketTransport } from "@colyseus/ws-transport";
 import { GAME_NAME, PROTOCOL_VERSION } from "@shattered-dominion/shared";
 import { GameRoom } from "./rooms/GameRoom.js";
 
-const pkg = createRequire(import.meta.url)("../package.json") as { version: string };
+/** Injetada pelo build de produção (esbuild define); em dev cai no package.json. */
+declare const __APP_VERSION__: string | undefined;
+
+const version =
+  typeof __APP_VERSION__ === "string"
+    ? __APP_VERSION__
+    : (createRequire(import.meta.url)("../package.json") as { version: string }).version;
 
 /** Fábrica do servidor — usada pelo entry point e pelos testes de integração. */
 export function createGameServer(): Server {
@@ -15,7 +21,7 @@ export function createGameServer(): Server {
       app.get("/health", (_req, res) => {
         res.json({
           status: "ok",
-          version: pkg.version,
+          version,
           game: GAME_NAME,
           protocol: PROTOCOL_VERSION,
         });

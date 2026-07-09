@@ -1,6 +1,7 @@
 # Dependências e build
 node_modules/
 dist/
+dist-prod/
 *.tsbuildinfo
 coverage/
 .vite/
@@ -10,6 +11,8 @@ tools/viz/out*.html
 .env
 .env.*
 !.env.example
+# URL pública do WS de produção — sem segredos, necessária ao build
+!packages/client/.env.production
 
 # Infra da VM de produção — NUNCA commitar (repo é público; contém IP, portas e detalhes de acesso)
 INFRA-VM-*.md

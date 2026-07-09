@@ -1,6 +1,9 @@
 import { defineConfig } from "vite";
 
-export default defineConfig({
+export default defineConfig(({ command }) => ({
+  // Em produção o jogo vive em /shattered-dominion/ no site da vitrine;
+  // no dev server continua na raiz.
+  base: command === "build" ? "/shattered-dominion/" : "/",
   server: {
     port: 5173,
     proxy: {
@@ -14,4 +17,4 @@ export default defineConfig({
       },
     },
   },
-});
+}));
