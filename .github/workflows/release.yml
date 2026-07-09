@@ -1,0 +1,49 @@
+# Release em tag v*: gate completo + artefatos prontos para o deploy.sh
+# (mesmos tars que o script gera localmente — client estático e bundle
+# único do servidor).
+name: release
+
+on:
+  push:
+    tags: ["v*"]
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write # anexa os artefatos à release da tag
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: pnpm/action-setup@v4 # versão vem do packageManager do package.json
+
+      - uses: actions/setup-node@v4
+        with:
+          node-version: 22
+          cache: pnpm
+
+      - name: instalar dependências
+        run: pnpm install --frozen-lockfile
+
+      - name: lint
+        run: pnpm lint
+
+      - name: testes
+        run: pnpm test
+
+      - name: build de produção
+        run: pnpm build:prod
+
+      - name: empacotar artefatos
+        run: |
+          tar -C packages/client/dist -czf shattered-dominion-client-${{ github.ref_name }}.tgz .
+          tar -C packages/server/dist-prod -czf shattered-dominion-server-${{ github.ref_name }}.tgz server.mjs
+
+      - name: publicar release
+        uses: softprops/action-gh-release@v2
+        with:
+          files: |
+            shattered-dominion-client-*.tgz
+            shattered-dominion-server-*.tgz
+          generate_release_notes: true
