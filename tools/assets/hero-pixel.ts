@@ -1,6 +1,8 @@
 /**
- * Guerreiro artesanal, pixel a pixel — estilo roguelike clássico:
- * cabeça ≈ metade da altura, paleta chapada, contorno preto 1px,
+ * Guerreiro artesanal, pixel a pixel — reprodução fiel do design aprovado
+ * pelo Felipe ("v3 B"): cabelo grisalho volumoso com franja, rosto tan,
+ * túnica caramelo, manto escuro nos ombros, detalhes teal na cintura
+ * (alvo do recolor), pernas curtas. Paleta chapada, contorno 1px,
  * idle ESTÁTICO (sem cintilação), walk de 2 poses + bob de 1px.
  *
  * Gera assets/sprites/hero.png (+ hero-0..7.png recoloridos) e hero.json
@@ -17,22 +19,23 @@ const OUT_DIR = join(ROOT, "packages", "client", "public", "assets", "sprites");
 const CANVAS = 28;
 const GRID = 16;
 
-// ── paleta (chapada, estilo PD) ──────────────────────────────────────
+// ── paleta (chapada, cores lidas do v3 B) ────────────────────────────
 const PAL: Record<string, [number, number, number, number]> = {
   ".": [0, 0, 0, 0], // transparente
-  o: [20, 16, 24, 255], // contorno
-  h: [72, 52, 40, 255], // cabelo castanho escuro
-  H: [52, 38, 30, 255], // cabelo sombra
-  s: [232, 183, 142, 255], // pele
-  S: [198, 142, 94, 255], // pele sombra
+  o: [12, 11, 16, 255], // contorno
+  h: [104, 102, 124, 255], // cabelo grisalho
+  H: [60, 58, 78, 255], // cabelo grisalho sombra
+  s: [235, 195, 152, 255], // pele
+  S: [204, 152, 106, 255], // pele sombra
   e: [24, 20, 30, 255], // olho
-  t: [138, 90, 43, 255], // túnica couro
-  T: [107, 68, 32, 255], // túnica sombra
+  t: [196, 132, 66, 255], // túnica caramelo
+  T: [152, 98, 48, 255], // túnica sombra
+  d: [82, 58, 46, 255], // manto/ombreiras escuras
   c: [63, 167, 160, 255], // pano teal (alvo do recolor)
-  b: [58, 42, 26, 255], // botas
+  b: [52, 40, 32, 255], // botas
   m: [186, 196, 206, 255], // lâmina
   M: [124, 134, 146, 255], // lâmina sombra
-  g: [92, 74, 50, 255], // punho/cabo
+  g: [110, 86, 56, 255], // punho/cabo
 };
 
 type Frame = string[];
@@ -52,77 +55,77 @@ function checked(name: string, rows: string[]): Frame {
 const SOUTH_BASE = checked("south", [
   "................",
   ".....oooooo.....",
-  "....ohhhhhho....",
-  "...ohhhhhhhho...",
-  "...ohssssssho...",
-  "...osesssseso...",
-  "...osssssssso...",
-  "....oSssssSo....",
-  ".....osssso.....",
-  "....otttttto....",
-  "...sttcccctts...",
-  "...ottcccctto...",
-  "....otttttto....",
-  ".....ob..bo.....",
-  ".....ob..bo.....",
-  ".....oo..oo.....",
+  "....ohhHhhho....",
+  "..oohhhhhhhhoo..",
+  "..ohHhhHhhHhho..",
+  "..ohhsssssshho..",
+  "..ohsessssesho..",
+  "..ohssssssssho..",
+  "...oSssssssSo...",
+  ".oddttttttttddo.",
+  "..odttttttttdo..",
+  "..octtttttttco..",
+  "...odttttttdo...",
+  "....obb..bbo....",
+  "....obb..bbo....",
+  "....ooo..ooo....",
 ]);
 
 const SOUTH_STRIDE = checked("south-stride", [
   "................",
   ".....oooooo.....",
-  "....ohhhhhho....",
-  "...ohhhhhhhho...",
-  "...ohssssssho...",
-  "...osesssseso...",
-  "...osssssssso...",
-  "....oSssssSo....",
-  ".....osssso.....",
-  "....otttttto....",
-  "...sttcccctts...",
-  "...ottcccctto...",
-  "....otttttto....",
-  "....ob....bo....",
-  "....ob....bo....",
-  "....oo....oo....",
+  "....ohhHhhho....",
+  "..oohhhhhhhhoo..",
+  "..ohHhhHhhHhho..",
+  "..ohhsssssshho..",
+  "..ohsessssesho..",
+  "..ohssssssssho..",
+  "...oSssssssSo...",
+  ".oddttttttttddo.",
+  "..odttttttttdo..",
+  "..octtttttttco..",
+  "...odttttttdo...",
+  "...obb....bbo...",
+  "...obb....bbo...",
+  "...ooo....ooo...",
 ]);
 
 const SOUTH_ATK_A = checked("south-atk-a", [
   "................",
   ".....oooooo..m..",
-  "....ohhhhhho.m..",
-  "...ohhhhhhhhoM..",
-  "...ohsssssshoM..",
-  "...osesssseso...",
-  "...ossssssssg...",
-  "....oSssssSo....",
-  ".....osssso.....",
-  "....otttttto....",
-  "...sttcccctto...",
-  "...ottcccctto...",
-  "....otttttto....",
-  ".....ob..bo.....",
-  ".....ob..bo.....",
-  ".....oo..oo.....",
+  "....ohhHhhho.m..",
+  "..oohhhhhhhhoM..",
+  "..ohHhhHhhHhho..",
+  "..ohhsssssshho..",
+  "..ohsessssesho..",
+  "..ohssssssssho..",
+  "...oSssssssSo...",
+  ".oddttttttttddg.",
+  "..odttttttttdo..",
+  "..octtttttttco..",
+  "...odttttttdo...",
+  "....obb..bbo....",
+  "....obb..bbo....",
+  "....ooo..ooo....",
 ]);
 
 const SOUTH_ATK_B = checked("south-atk-b", [
   "................",
   ".....oooooo.....",
-  "....ohhhhhho....",
-  "...ohhhhhhhho...",
-  "...ohssssssho...",
-  "...osesssseso...",
-  "...osssssssso...",
-  "....oSssssSo....",
-  ".....osssso.....",
-  "....otttttto....",
-  "...sttccccttgmmM",
-  "...ottcccctto...",
-  "....otttttto....",
-  ".....ob..bo.....",
-  ".....ob..bo.....",
-  ".....oo..oo.....",
+  "....ohhHhhho....",
+  "..oohhhhhhhhoo..",
+  "..ohHhhHhhHhho..",
+  "..ohhsssssshho..",
+  "..ohsessssesho..",
+  "..ohssssssssho..",
+  "...oSssssssSo...",
+  ".oddttttttttddo.",
+  "..odttttttttdo..",
+  "..octtttttttcgmM",
+  "...odttttttdo...",
+  "....obb..bbo....",
+  "....obb..bbo....",
+  "....ooo..ooo....",
 ]);
 
 const SOUTH_DEATH_A = checked("south-death-a", [
@@ -132,13 +135,13 @@ const SOUTH_DEATH_A = checked("south-death-a", [
   ".....oooooo.....",
   "....ohhhhhho....",
   "...ohhhhhhhho...",
-  "...ohssssssho...",
-  "...oseosseoso...",
+  "..ohhHhhhhHhho..",
+  "..ohsessssesho..",
   "...osssssssso...",
   "....oSssssSo....",
-  "....otttttto....",
-  "...ottcccctto...",
-  "....otttttto....",
+  "...odttttttdo...",
+  "..octtttttttco..",
+  "...odttttttdo...",
   "....obo..obo....",
   "................",
   "................",
@@ -156,31 +159,31 @@ const SOUTH_DEATH_B = checked("south-death-b", [
   "................",
   "................",
   "..oooooooo......",
-  ".ohhssssssoooo..",
-  ".ohseesssttcto..",
-  ".ohssssssttcto..",
+  ".ohhhhssssoooo..",
+  ".ohHseesstttco..",
+  ".ohhhsssstttco..",
   "..oooooooooooo..",
   "................",
 ]);
 
-// ── NORTE (de costas) ───────────────────────────────────────────────
+// ── NORTE (de costas — bola de cabelo, teal na cintura) ─────────────
 const NORTH_BASE = checked("north", [
   "................",
   ".....oooooo.....",
   "....ohhhhhho....",
   "...ohhhhhhhho...",
-  "...ohhhhhhhho...",
-  "...ohhhhhhhho...",
+  "..ohhhhHhhhhho..",
+  "..ohHhhhhhHhho..",
+  "..ohhhHhhhhhho..",
   "...oHhhhhhhHo...",
-  "....oSssssSo....",
-  ".....osssso.....",
-  "....otttttto....",
-  "...stttttttts...",
-  "...otttttttto...",
-  "....otttttto....",
-  ".....ob..bo.....",
-  ".....ob..bo.....",
-  ".....oo..oo.....",
+  "....ohhhhhho....",
+  ".oddttttttttddo.",
+  "..odttttttttdo..",
+  "..octtttttttco..",
+  "...odttttttdo...",
+  "....obb..bbo....",
+  "....obb..bbo....",
+  "....ooo..ooo....",
 ]);
 
 const NORTH_STRIDE = checked("north-stride", [
@@ -188,18 +191,18 @@ const NORTH_STRIDE = checked("north-stride", [
   ".....oooooo.....",
   "....ohhhhhho....",
   "...ohhhhhhhho...",
-  "...ohhhhhhhho...",
-  "...ohhhhhhhho...",
+  "..ohhhhHhhhhho..",
+  "..ohHhhhhhHhho..",
+  "..ohhhHhhhhhho..",
   "...oHhhhhhhHo...",
-  "....oSssssSo....",
-  ".....osssso.....",
-  "....otttttto....",
-  "...stttttttts...",
-  "...otttttttto...",
-  "....otttttto....",
-  "....ob....bo....",
-  "....ob....bo....",
-  "....oo....oo....",
+  "....ohhhhhho....",
+  ".oddttttttttddo.",
+  "..odttttttttdo..",
+  "..octtttttttco..",
+  "...odttttttdo...",
+  "...obb....bbo...",
+  "...obb....bbo...",
+  "...ooo....ooo...",
 ]);
 
 const NORTH_ATK_A = checked("north-atk-a", [
@@ -207,18 +210,18 @@ const NORTH_ATK_A = checked("north-atk-a", [
   ".....oooooo..m..",
   "....ohhhhhho.m..",
   "...ohhhhhhhhoM..",
-  "...ohhhhhhhhoM..",
-  "...ohhhhhhhho...",
-  "...oHhhhhhhHg...",
-  "....oSssssSo....",
-  ".....osssso.....",
-  "....otttttto....",
-  "...stttttttto...",
-  "...otttttttto...",
-  "....otttttto....",
-  ".....ob..bo.....",
-  ".....ob..bo.....",
-  ".....oo..oo.....",
+  "..ohhhhHhhhhho..",
+  "..ohHhhhhhHhho..",
+  "..ohhhHhhhhhho..",
+  "...oHhhhhhhHo...",
+  "....ohhhhhho....",
+  ".oddttttttttddg.",
+  "..odttttttttdo..",
+  "..octtttttttco..",
+  "...odttttttdo...",
+  "....obb..bbo....",
+  "....obb..bbo....",
+  "....ooo..ooo....",
 ]);
 
 const NORTH_ATK_B = checked("north-atk-b", [
@@ -226,38 +229,38 @@ const NORTH_ATK_B = checked("north-atk-b", [
   ".....oooooo.....",
   "....ohhhhhho....",
   "...ohhhhhhhho...",
-  "...ohhhhhhhho...",
-  "...ohhhhhhhho...",
+  "..ohhhhHhhhhho..",
+  "..ohHhhhhhHhho..",
+  "..ohhhHhhhhhho..",
   "...oHhhhhhhHo...",
-  "....oSssssSo....",
-  ".....osssso.....",
-  "....otttttto....",
-  "...stttttttтgmmM".replace("т", "t"),
-  "...otttttttto...",
-  "....otttttto....",
-  ".....ob..bo.....",
-  ".....ob..bo.....",
-  ".....oo..oo.....",
+  "....ohhhhhho....",
+  ".oddttttttttddo.",
+  "..odttttttttdo..",
+  "..octtttttttcgmM",
+  "...odttttttdo...",
+  "....obb..bbo....",
+  "....obb..bbo....",
+  "....ooo..ooo....",
 ]);
 
-// ── LESTE (perfil direito) ──────────────────────────────────────────
+// ── LESTE (perfil direito — cabelo atrás, rosto à frente) ───────────
 const EAST_BASE = checked("east", [
   "................",
   ".....ooooo......",
   "....ohhhhho.....",
   "...ohhhhhhho....",
-  "...ohhssssso....",
-  "...ohhsssеso....".replace("е", "e"),
-  "...ohhssssso....",
-  "....oSssssSo....",
-  ".....ossso......",
-  ".....otttto.....",
-  "....ottcctto....",
-  "....ottcctgo....",
-  ".....otttto.....",
-  "......ob.bo.....",
-  "......ob.bo.....",
-  "......oo.oo.....",
+  "..ohhHhhhhsso...",
+  "..ohhhhhsseso...",
+  "..ohHhhhsssso...",
+  "...oHhhhSssSo...",
+  "....ohhhosso....",
+  "....oddtttto....",
+  "....odttttco....",
+  "....odttttgo....",
+  ".....odtto......",
+  ".....obb.bbo....",
+  ".....obb.bbo....",
+  ".....ooo.ooo....",
 ]);
 
 const EAST_STRIDE = checked("east-stride", [
@@ -265,18 +268,18 @@ const EAST_STRIDE = checked("east-stride", [
   ".....ooooo......",
   "....ohhhhho.....",
   "...ohhhhhhho....",
-  "...ohhssssso....",
-  "...ohhsssеso....".replace("е", "e"),
-  "...ohhssssso....",
-  "....oSssssSo....",
-  ".....ossso......",
-  ".....otttto.....",
-  "....ottcctto....",
-  "....ottcctgo....",
-  ".....otttto.....",
-  ".....ob...bo....",
-  ".....ob...bo....",
-  ".....oo...oo....",
+  "..ohhHhhhhsso...",
+  "..ohhhhhsseso...",
+  "..ohHhhhsssso...",
+  "...oHhhhSssSo...",
+  "....ohhhosso....",
+  "....oddtttto....",
+  "....odttttco....",
+  "....odttttgo....",
+  ".....odtto......",
+  "....obb...bbo...",
+  "....obb...bbo...",
+  "....ooo...ooo...",
 ]);
 
 const EAST_ATK_A = checked("east-atk-a", [
@@ -284,18 +287,18 @@ const EAST_ATK_A = checked("east-atk-a", [
   ".....ooooo..m...",
   "....ohhhhho.m...",
   "...ohhhhhhhoM...",
-  "...ohhsssssoM...",
-  "...ohhsssеso....".replace("е", "e"),
-  "...ohhsssssg....",
-  "....oSssssSo....",
-  ".....ossso......",
-  ".....otttto.....",
-  "....ottcctto....",
-  "....ottcctto....",
-  ".....otttto.....",
-  "......ob.bo.....",
-  "......ob.bo.....",
-  "......oo.oo.....",
+  "..ohhHhhhhsso...",
+  "..ohhhhhsseso...",
+  "..ohHhhhsssso...",
+  "...oHhhhSssSo...",
+  "....ohhhosso....",
+  "....oddttttog...",
+  "....odttttco....",
+  "....odttttgo....",
+  ".....odtto......",
+  ".....obb.bbo....",
+  ".....obb.bbo....",
+  ".....ooo.ooo....",
 ]);
 
 const EAST_ATK_B = checked("east-atk-b", [
@@ -303,18 +306,18 @@ const EAST_ATK_B = checked("east-atk-b", [
   ".....ooooo......",
   "....ohhhhho.....",
   "...ohhhhhhho....",
-  "...ohhssssso....",
-  "...ohhsssеso....".replace("е", "e"),
-  "...ohhssssso....",
-  "....oSssssSo....",
-  ".....ossso......",
-  ".....otttto.....",
-  "....ottcctgmmmM.",
-  "....ottcctto....",
-  ".....otttto.....",
-  "......ob.bo.....",
-  "......ob.bo.....",
-  "......oo.oo.....",
+  "..ohhHhhhhsso...",
+  "..ohhhhhsseso...",
+  "..ohHhhhsssso...",
+  "...oHhhhSssSo...",
+  "....ohhhosso....",
+  "....oddtttto....",
+  "....odttttgmmmM.",
+  "....odttttco....",
+  ".....odtto......",
+  ".....obb.bbo....",
+  ".....obb.bbo....",
+  ".....ooo.ooo....",
 ]);
 
 const DIRECTIONS = ["south", "east", "north", "west"] as const;
@@ -432,7 +435,7 @@ export function generateHeroSheet(): void {
     }
     writeFileSync(join(OUT_DIR, `hero-${v}.png`), PNG.sync.write(out));
   }
-  console.log(`herói artesanal: ${rows.length} linhas × ${columns} + 8 recolors`);
+  console.log(`herói artesanal (design v3 B): ${rows.length} linhas × ${columns} + 8 recolors`);
 }
 
 function rgbToHsl(r: number, g: number, b: number): [number, number, number] {
