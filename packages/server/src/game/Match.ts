@@ -155,11 +155,11 @@ export class Match {
 
   // ── jogadores ──────────────────────────────────────────────────────
 
-  /** Posiciona o jogador no próximo spawn livre da sala de entrada. */
-  addPlayer(id: string, name: string): Vec2 {
-    const spawn = this.level.spawnPoints.find(
-      (p) => !this.occupancy.has(this.level.grid.index(p.x, p.y)),
-    );
+  /** Posiciona o jogador no próximo spawn livre da sala de entrada (ou em `at`). */
+  addPlayer(id: string, name: string, at?: Vec2): Vec2 {
+    const spawn =
+      at ??
+      this.level.spawnPoints.find((p) => !this.occupancy.has(this.level.grid.index(p.x, p.y)));
     if (!spawn) throw new Error("Match.addPlayer: sem spawn livre");
 
     const stats = heroStats(1);
@@ -196,6 +196,29 @@ export class Match {
     this.actors.set(id, player);
     this.occupancy.set(this.level.grid.index(spawn.x, spawn.y), id);
     return { x: spawn.x, y: spawn.y };
+  }
+
+  /**
+   * Entrada mid-run: nasce na sala de entrada (spawn livre; senão o tile
+   * livre mais próximo da escada ▲) com kit básico — Adaga equipada e uma
+   * Ração — para não entrar de mãos vazias no meio da run.
+   */
+  addPlayerMidRun(id: string, name: string): Vec2 {
+    const livre = this.level.spawnPoints.find(
+      (p) => !this.occupancy.has(this.level.grid.index(p.x, p.y)),
+    );
+    const spot = livre ?? this.findFreeTileNear(this.level.stairsUp);
+    if (!spot) throw new Error("Match.addPlayerMidRun: sem tile livre");
+    this.addPlayer(id, name, spot);
+    const player = this.actors.get(id) as PlayerActor;
+
+    const dagger: ItemInstance = { uid: `item-${++this.itemSeq}`, itemId: "dagger", upgrade: 0 };
+    const ration: ItemInstance = { uid: `item-${++this.itemSeq}`, itemId: "ration", upgrade: 0 };
+    player.inventory.push(dagger, ration);
+    player.equippedWeapon = dagger.uid;
+    this.applyEquipment(player);
+    this.info(player, `${player.name} juntou-se ao grupo`);
+    return { x: player.x, y: player.y };
   }
 
   removePlayer(id: string): void {

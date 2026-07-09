@@ -121,13 +121,37 @@ describe("GameRoom — lobby, início de partida e visão", () => {
     expect(room.state.depth).toBe(posAntes);
   });
 
-  it("entrar depois do início é recusado (mid-run na sprint 05)", async () => {
+  it("entrada mid-run: novato nasce no andar do grupo com kit básico e visão", async () => {
     const room = await createLobby();
     const c1 = await colyseus.connectTo(room, { name: "Ana" });
     c1.send(MessageType.Start);
     await room.waitForMessage(MessageType.Start);
 
-    await expect(colyseus.sdk.joinById(room.roomId, { name: "Atrasado" })).rejects.toThrow();
+    const c2 = await colyseus.sdk.joinById(room.roomId, { name: "Atrasada" });
+    const started = await c2.waitForMessage(MessageType.MatchStarted);
+    expect(started).toMatchObject({ width: 32, height: 32, depth: 1 });
+
+    const vision = c2.waitForMessage(MessageType.Vision);
+    room.tickUpdate(); // visão do novato flui pelo tick normal
+    const v: VisionMessage = await vision;
+    expect(v.discovered.length).toBeGreaterThan(0);
+    // kit básico: Adaga equipada + Ração
+    const labels = v.you.inventory.map((i) => `${i.label}${i.equipped ? "*" : ""}`);
+    expect(labels).toContain("Adaga*");
+    expect(labels).toContain("Ração de Viagem");
+    expect(room.state.players.size).toBe(2);
+  });
+
+  it("mid-run ainda respeita o teto de 8 jogadores", async () => {
+    const room = await createLobby();
+    const c1 = await colyseus.connectTo(room, { name: "Host" });
+    for (let i = 0; i < MAX_PLAYERS - 1; i++) {
+      await colyseus.connectTo(room, { name: `J${i + 2}` });
+    }
+    c1.send(MessageType.Start);
+    await room.waitForMessage(MessageType.Start);
+
+    await expect(colyseus.sdk.joinById(room.roomId, { name: "Nono" })).rejects.toThrow();
   });
 
   it("host que sai no lobby passa o bastão para o próximo", async () => {

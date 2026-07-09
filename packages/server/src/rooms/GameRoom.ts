@@ -1,4 +1,4 @@
-import { Room, ServerError, type Client } from "@colyseus/core";
+import { Room, type Client } from "@colyseus/core";
 import { MapSchema, Schema, type } from "@colyseus/schema";
 import {
   CHAT_MAX_LENGTH,
@@ -87,10 +87,6 @@ export class GameRoom extends Room {
   }
 
   override onJoin(client: Client, options?: { name?: unknown }): void {
-    if (this.state.phase !== "lobby") {
-      // Entrada mid-run chega na sprint 05.
-      throw new ServerError(4002, "Partida já em andamento.");
-    }
     const player = new PlayerState();
     player.sessionId = client.sessionId;
     player.name = sanitizeName(options?.name, client.sessionId);
@@ -99,6 +95,19 @@ export class GameRoom extends Room {
     if (!this.state.hostSessionId) {
       this.state.hostSessionId = client.sessionId;
     }
+
+    // entrada mid-run: nasce no andar do grupo com kit básico; a visão
+    // inicial flui pelo próximo tick (jogador novo sempre recebe tudo)
+    if (this.state.phase === "playing" && this.match) {
+      this.match.addPlayerMidRun(client.sessionId, player.name);
+      const started: MatchStartedMessage = {
+        width: this.match.level.width,
+        height: this.match.level.height,
+        depth: this.state.depth,
+      };
+      client.send(MessageType.MatchStarted, started);
+    }
+
     console.log(
       `[GameRoom ${this.roomId}] entrou: ${player.name} (${this.state.players.size}/${this.maxClients})`,
     );
@@ -167,7 +176,7 @@ export class GameRoom extends Room {
 
     this.state.phase = "playing";
     this.state.depth = 1;
-    void this.lock(); // sem entrada mid-run por enquanto
+    // sala continua aberta: entrada mid-run é permitida até o teto de 8
 
     const started: MatchStartedMessage = {
       width: this.match.level.width,
