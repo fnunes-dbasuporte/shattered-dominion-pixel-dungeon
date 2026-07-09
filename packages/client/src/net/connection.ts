@@ -9,6 +9,9 @@ import {
 
 const endpoint = import.meta.env.VITE_WS_ENDPOINT ?? `${location.origin}/colyseus`;
 
+/** sessionStorage: por aba, sobrevive a F5 — exatamente o escopo da reconexão. */
+const RECONNECT_TOKEN_KEY = "sd:reconnect";
+
 /**
  * Camada fina sobre o SDK do Colyseus. Registra os handlers de mensagem
  * imediatamente após entrar na sala (o SDK descarta mensagens sem handler)
@@ -19,9 +22,11 @@ export class GameConnection {
   private visionHandler?: (v: VisionMessage) => void;
   private pendingChats: ChatBroadcast[] = [];
   private chatHandler?: (c: ChatBroadcast) => void;
+  private leaveHandler?: (code: number) => void;
   private readonly startedPromise: Promise<MatchStartedMessage>;
 
   private constructor(readonly room: Room) {
+    sessionStorage.setItem(RECONNECT_TOKEN_KEY, room.reconnectionToken);
     this.startedPromise = new Promise((resolve) => {
       room.onMessage(MessageType.MatchStarted, resolve);
     });
@@ -33,6 +38,28 @@ export class GameConnection {
       if (this.chatHandler) this.chatHandler(c);
       else this.pendingChats.push(c);
     });
+    room.onLeave((code) => this.leaveHandler?.(code));
+  }
+
+  /**
+   * Tenta retomar a sessão desta aba (F5 ou queda). Retorna null se não há
+   * token ou o assento expirou — nesse caso o fluxo normal de lobby assume.
+   */
+  static async tryReconnect(): Promise<GameConnection | null> {
+    const token = sessionStorage.getItem(RECONNECT_TOKEN_KEY);
+    if (!token) return null;
+    try {
+      const client = new Client(endpoint);
+      return new GameConnection(await client.reconnect(token));
+    } catch {
+      sessionStorage.removeItem(RECONNECT_TOKEN_KEY);
+      return null;
+    }
+  }
+
+  /** Registra o observador de desconexão (queda ou saída). */
+  onRoomLeave(cb: (code: number) => void): void {
+    this.leaveHandler = cb;
   }
 
   static async createRoom(name: string): Promise<GameConnection> {

@@ -200,6 +200,12 @@ export class GameScene extends Phaser.Scene {
       this.showBalloon(c.senderId, c.text);
     });
 
+    // queda de conexão: banner e reload — na volta, tryReconnect retoma a sessão
+    this.conn.onRoomLeave(() => {
+      this.banner.setText("Conexão perdida — reconectando...").setColor("#e8c04d").setVisible(true);
+      this.time.delayedCall(1200, () => location.reload());
+    });
+
     this.reposicionarUi(); // reposiciona incluindo o statusText recém-criado
     this.conn.onVision((v) => this.onVision(v));
   }
