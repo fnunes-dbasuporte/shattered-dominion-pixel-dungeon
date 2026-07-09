@@ -15,6 +15,7 @@ import type { GameConnection } from "../net/connection.js";
 
 import { InventoryPanel } from "../ui/inventory.js";
 import { ChatBox } from "../ui/chat.js";
+import { showResultScreen } from "../ui/resultScreen.js";
 import {
   createCharacterAnims,
   facingFromDelta,
@@ -40,6 +41,7 @@ export const ITEM_ICONS = [
   "ration",
   "gold",
   "ankh",
+  "amulet",
 ];
 
 export const TILE_PX = 32;
@@ -120,6 +122,9 @@ export class GameScene extends Phaser.Scene {
   private lastSentDir = "";
   private currentDepth = 1;
   private descent: { votes: number; needed: number } | null = null;
+  private bossBarGfx!: Phaser.GameObjects.Graphics;
+  private bossBarText!: Phaser.GameObjects.Text;
+  private runOver = false;
   /** compensação de jitter: visões seguram até 2 ticks (200ms) antes de aplicar. */
   private visionQueue: { v: VisionMessage; at: number }[] = [];
 
@@ -163,6 +168,19 @@ export class GameScene extends Phaser.Scene {
     this.hudGfx = this.add.graphics().setScrollFactor(0).setDepth(100);
     this.hudText = this.add
       .text(12, 0, "", { fontFamily: "monospace", fontSize: "12px", color: "#e8e6f0" })
+      .setScrollFactor(0)
+      .setDepth(101);
+
+    this.bossBarGfx = this.add.graphics().setScrollFactor(0).setDepth(100);
+    this.bossBarText = this.add
+      .text(0, 26, "", {
+        fontFamily: "monospace",
+        fontSize: "12px",
+        color: "#e8e6f0",
+        stroke: "#0b0a10",
+        strokeThickness: 3,
+      })
+      .setOrigin(0.5, 1)
       .setScrollFactor(0)
       .setDepth(101);
 
@@ -225,6 +243,13 @@ export class GameScene extends Phaser.Scene {
       if (this.you.alive) this.conn.sendStairs();
     });
     this.conn.onFloorChanged((msg) => this.resetFloor(msg));
+    this.conn.onRunEnded((msg) => {
+      this.runOver = true;
+      this.invPanel.close();
+      this.banner.setVisible(false);
+      this.pushLog(msg.victory ? "— VITÓRIA! —" : "— derrota —");
+      showResultScreen(msg, () => this.conn.leaveToLobby());
+    });
     this.conn.onChat((c) => {
       this.pushLog(`${c.name}: ${c.text}`);
       this.showBalloon(c.senderId, c.text);
@@ -294,6 +319,7 @@ export class GameScene extends Phaser.Scene {
 
   override update(time: number): void {
     this.drainVisionQueue();
+    if (this.runOver) return; // tela de resultado no comando
     if (this.invPanel.isOpen || this.chat.isOpen) return; // UI aberta pausa o input do jogo
     const dir = this.readKeyboardDir();
 
@@ -361,9 +387,32 @@ export class GameScene extends Phaser.Scene {
     this.syncFloorItems(v);
     this.invPanel.update(v.you);
     this.drawHud();
-    this.banner.setVisible(!v.you.alive);
+    this.drawBossBar(v.actors.find((a) => a.kind === "boss"));
+    this.banner.setVisible(!v.you.alive && !this.runOver);
     this.updateTopBar(v.actors.length);
     this.onVisionExtra(v, newActorIds);
+  }
+
+  /** Barra grande do boss no topo — aparece enquanto ele estiver à vista. */
+  private drawBossBar(boss: VisibleActor | undefined): void {
+    const g = this.bossBarGfx;
+    g.clear();
+    if (!boss) {
+      this.bossBarText.setText("");
+      return;
+    }
+    const cam = this.cameras.main;
+    const w = Math.min(320, cam.width - 40);
+    const x = (cam.width - w) / 2;
+    const frac = Math.max(0, boss.hp / boss.maxHp);
+    g.fillStyle(0x0b0a10, 0.8);
+    g.fillRect(x - 2, 30, w + 4, 14);
+    g.fillStyle(0x2c2740);
+    g.fillRect(x, 32, w, 10);
+    g.fillStyle(frac > 0.5 ? 0x8a3fbf : 0xe8554d);
+    g.fillRect(x, 32, w * frac, 10);
+    this.bossBarText.setPosition(cam.width / 2, 29);
+    this.bossBarText.setText(`${boss.name} · ${boss.hp}/${boss.maxHp}`);
   }
 
   /** Ícones dos itens/ouro no chão (imagens 32px exibidas em 12px de mundo). */
@@ -447,12 +496,41 @@ export class GameScene extends Phaser.Scene {
           this.floatingText(e.x, e.y, "reviveu!", "#4da3e8");
           this.pushLog(`${e.name} reviveu`);
           break;
+        case "telegraph":
+          this.showTelegraph(e.x, e.y, e.ticks);
+          this.pushLog("SAIA DA ÁREA MARCADA!");
+          break;
         case "info":
           this.pushLog(e.text);
           break;
       }
     }
     return dying;
+  }
+
+  /** Área 3×3 do ataque carregado piscando; explosão visual quando o tempo acaba. */
+  private showTelegraph(cx: number, cy: number, ticks: number): void {
+    const size = TILE_PX * 3;
+    const x = (cx - 1) * TILE_PX;
+    const y = (cy - 1) * TILE_PX;
+    const g = this.add.graphics().setDepth(5);
+    g.fillStyle(0xe8554d, 0.3);
+    g.fillRect(x, y, size, size);
+    g.lineStyle(2, 0xe8554d, 0.95);
+    g.strokeRect(x + 1, y + 1, size - 2, size - 2);
+
+    const total = ticks * 100; // ticks do servidor → ms
+    this.tweens.add({
+      targets: g,
+      alpha: { from: 1, to: 0.25 },
+      duration: 150,
+      yoyo: true,
+      repeat: Math.max(1, Math.floor(total / 300) - 1),
+    });
+    this.time.delayedCall(total, () => {
+      g.destroy();
+      this.spawnEffect("fx-poof", cx, cy, { from: 44, to: 104, duration: 380 });
+    });
   }
 
   /** Arco de slash sobre o alvo, rotacionado na direção do golpe. */
@@ -606,8 +684,14 @@ export class GameScene extends Phaser.Scene {
   private createActorSprite(actor: VisibleActor): ActorSprite {
     const souEu = actor.id === this.conn.sessionId;
     const ehMob = actor.kind !== "player";
-    const texture =
-      actor.kind === "player" ? `hero-${actor.colorIndex % PLAYER_COLORS.length}` : actor.kind;
+    // lodo minion reutiliza a sheet do boss (mesma criatura, menor)
+    let texture =
+      actor.kind === "player"
+        ? `hero-${actor.colorIndex % PLAYER_COLORS.length}`
+        : actor.kind === "sludge"
+          ? "boss"
+          : actor.kind;
+    if (!this.textures.exists(texture)) texture = "rat"; // asset ainda não gerado
 
     const partes: Phaser.GameObjects.GameObject[] = [];
     if (souEu) {
@@ -616,14 +700,19 @@ export class GameScene extends Phaser.Scene {
     }
 
     const sprite = this.add.sprite(0, 0, texture);
+    // a arte do boss já é 60px (quase 2 tiles); o lodo é a mesma arte, miúda
+    if (actor.kind === "sludge") sprite.setScale(0.4);
     partes.push(sprite);
 
     // nome na cor do jogador — reforça a identidade além do tecido do sprite
-    const corDoNome = ehMob
-      ? "#c98a7a"
-      : `#${PLAYER_COLORS[actor.colorIndex % PLAYER_COLORS.length].toString(16).padStart(6, "0")}`;
+    const corDoNome =
+      actor.kind === "boss"
+        ? "#e8554d"
+        : ehMob
+          ? "#c98a7a"
+          : `#${PLAYER_COLORS[actor.colorIndex % PLAYER_COLORS.length].toString(16).padStart(6, "0")}`;
     const label = this.add
-      .text(0, -26, actor.asleep ? `${actor.name} 💤` : actor.name, {
+      .text(0, actor.kind === "boss" ? -38 : -26, actor.asleep ? `${actor.name} 💤` : actor.name, {
         fontFamily: "monospace",
         fontSize: "10px",
         color: corDoNome,

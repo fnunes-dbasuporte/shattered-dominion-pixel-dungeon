@@ -254,6 +254,78 @@
         margin-top: 10px;
       }
 
+      /* ── tela de resultado ── */
+      #result {
+        position: fixed;
+        inset: 0;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        background: rgba(11, 10, 16, 0.85);
+        z-index: 30;
+        font-family: monospace;
+      }
+      .result-card {
+        background: #17141f;
+        border: 14px solid transparent;
+        border-image: url("assets/ui/panel.png") 32 round;
+        image-rendering: pixelated;
+        padding: 18px 26px;
+        width: min(520px, 94vw);
+        text-align: center;
+      }
+      .result-title {
+        font-size: 28px;
+        letter-spacing: 4px;
+        margin: 4px 0 10px;
+      }
+      .result-title.vitoria {
+        color: #5fce6b;
+        text-shadow: 0 0 12px rgba(95, 206, 107, 0.45);
+      }
+      .result-title.derrota {
+        color: #e8554d;
+        text-shadow: 0 0 12px rgba(232, 85, 77, 0.45);
+      }
+      .result-sub {
+        color: #9a96ad;
+        font-size: 12px;
+        margin: 2px 0;
+      }
+      .result-table {
+        width: 100%;
+        border-collapse: collapse;
+        margin: 14px 0;
+        font-size: 12px;
+      }
+      .result-table th {
+        color: #55506b;
+        font-weight: normal;
+        text-align: center;
+        padding: 4px 6px;
+        border-bottom: 1px solid #2c2740;
+      }
+      .result-table td {
+        color: #e8e6f0;
+        text-align: center;
+        padding: 5px 6px;
+      }
+      .result-btn {
+        background: #4da3e8;
+        color: #0b0a10;
+        border: 0;
+        border-radius: 4px;
+        padding: 10px 22px;
+        font-family: monospace;
+        font-size: 13px;
+        font-weight: bold;
+        cursor: pointer;
+        margin-top: 6px;
+      }
+      .result-btn:hover {
+        filter: brightness(1.15);
+      }
+
       /* ── chat ── */
       #chat {
         position: fixed;

@@ -4,6 +4,7 @@ import {
   type ChatBroadcast,
   type MatchStartedMessage,
   type MoveMessage,
+  type RunEndedMessage,
   type VisionMessage,
 } from "@shattered-dominion/shared";
 
@@ -138,6 +139,17 @@ export class GameConnection {
 
   onFloorChanged(cb: (msg: MatchStartedMessage) => void): void {
     this.room.onMessage(MessageType.FloorChanged, cb);
+  }
+
+  onRunEnded(cb: (msg: RunEndedMessage) => void): void {
+    this.room.onMessage(MessageType.RunEnded, cb);
+  }
+
+  /** Fim de run: abandona o assento e recarrega no lobby (sem retomar sessão). */
+  leaveToLobby(): void {
+    sessionStorage.removeItem(RECONNECT_TOKEN_KEY);
+    void this.room.leave();
+    location.reload();
   }
 
   onChat(cb: (c: ChatBroadcast) => void): void {

@@ -11,9 +11,13 @@ export interface SheetMeta {
 /** Canvas padrão dos personagens 32px do Pixellab (v3 usa 56; menores são centralizados). */
 export const CHAR_CANVAS = 56;
 
-/** hero-0..7 compartilham o meta de "hero"; mobs têm sheet própria. */
+/** Canvas por textura quando difere do padrão — o boss tem arte 60px. */
+const FRAME_SIZES: Record<string, number> = { boss: 64 };
+
+/** hero-0..7 compartilham o meta de "hero"; mobs têm sheet própria.
+ *  O lodo minion reutiliza a sheet do boss em escala menor (mesma criatura). */
 const HERO_VARIANTS = Array.from({ length: 8 }, (_, i) => `hero-${i}`);
-export const CHARACTER_TEXTURES = [...HERO_VARIANTS, "rat", "gnoll", "crab"];
+export const CHARACTER_TEXTURES = [...HERO_VARIANTS, "rat", "gnoll", "crab", "boss"];
 
 const metaSource = (texture: string) => (texture.startsWith("hero-") ? "hero" : texture);
 
@@ -25,9 +29,10 @@ export function preloadCharacters(scene: Phaser.Scene): void {
       metasLoaded.add(meta);
       scene.load.json(`${meta}-meta`, `assets/sprites/${meta}.json`);
     }
+    const size = FRAME_SIZES[texture] ?? CHAR_CANVAS;
     scene.load.spritesheet(texture, `assets/sprites/${texture}.png`, {
-      frameWidth: CHAR_CANVAS,
-      frameHeight: CHAR_CANVAS,
+      frameWidth: size,
+      frameHeight: size,
     });
   }
 }
