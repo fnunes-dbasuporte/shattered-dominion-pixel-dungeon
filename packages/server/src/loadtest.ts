@@ -5,7 +5,7 @@
  * Uso: pnpm loadtest [-- --duration 300 --players 8 --mobs 20]
  * Sai com código 1 se o p95 dos ticks passar de 50ms.
  */
-import { boot } from "@colyseus/testing";
+import { ColyseusTestServer } from "@colyseus/testing";
 import { DIRECTIONS8, MessageType } from "@shattered-dominion/shared";
 import { createGameServer } from "./app.js";
 import type { GameRoom } from "./rooms/GameRoom.js";
@@ -24,7 +24,11 @@ async function main(): Promise<void> {
   const players = Math.min(8, flag("--players", 8));
   const targetMobs = flag("--mobs", 20);
 
-  const colyseus = await boot(createGameServer(), LOADTEST_PORT);
+  // boot() ignora a porta na sobrecarga de Server (fixa 2568 e colidiria com
+  // o pnpm test) — sobe manualmente na porta própria do load test
+  const gameServer = createGameServer();
+  await gameServer.listen(LOADTEST_PORT);
+  const colyseus = new ColyseusTestServer(gameServer);
   const host = await colyseus.sdk.create("game", { name: "load-1" });
   const clients = [host];
   for (let i = 2; i <= players; i++) {
