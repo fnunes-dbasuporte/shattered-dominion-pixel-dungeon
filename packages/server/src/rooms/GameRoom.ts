@@ -1,8 +1,10 @@
 import { Room, ServerError, type Client } from "@colyseus/core";
 import { MapSchema, Schema, type } from "@colyseus/schema";
 import {
+  CHAT_MAX_LENGTH,
   MAX_PLAYERS,
   MessageType,
+  type ChatBroadcast,
   type GamePhase,
   type MatchStartedMessage,
   type VisionMessage,
@@ -69,6 +71,16 @@ export class GameRoom extends Room {
     this.onMessage(MessageType.Drop, (client, payload: unknown) => {
       if (this.state.phase !== "playing") return;
       this.match?.drop(client.sessionId, (payload as { uid?: unknown })?.uid);
+    });
+    this.onMessage(MessageType.Chat, (client, payload: unknown) => {
+      const raw = (payload as { text?: unknown })?.text;
+      if (typeof raw !== "string") return;
+      const text = raw.trim().slice(0, CHAT_MAX_LENGTH);
+      if (text.length === 0) return;
+      const sender = this.state.players.get(client.sessionId);
+      if (!sender) return;
+      const msg: ChatBroadcast = { senderId: client.sessionId, name: sender.name, text };
+      this.broadcast(MessageType.Chat, msg);
     });
 
     console.log(`[GameRoom ${this.roomId}] lobby criado`);

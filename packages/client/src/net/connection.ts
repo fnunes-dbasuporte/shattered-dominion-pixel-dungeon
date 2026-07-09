@@ -1,6 +1,7 @@
 import { Client, type Room } from "@colyseus/sdk";
 import {
   MessageType,
+  type ChatBroadcast,
   type MatchStartedMessage,
   type MoveMessage,
   type VisionMessage,
@@ -16,6 +17,8 @@ const endpoint = import.meta.env.VITE_WS_ENDPOINT ?? `${location.origin}/colyseu
 export class GameConnection {
   private pendingVisions: VisionMessage[] = [];
   private visionHandler?: (v: VisionMessage) => void;
+  private pendingChats: ChatBroadcast[] = [];
+  private chatHandler?: (c: ChatBroadcast) => void;
   private readonly startedPromise: Promise<MatchStartedMessage>;
 
   private constructor(readonly room: Room) {
@@ -25,6 +28,10 @@ export class GameConnection {
     room.onMessage(MessageType.Vision, (v: VisionMessage) => {
       if (this.visionHandler) this.visionHandler(v);
       else this.pendingVisions.push(v);
+    });
+    room.onMessage(MessageType.Chat, (c: ChatBroadcast) => {
+      if (this.chatHandler) this.chatHandler(c);
+      else this.pendingChats.push(c);
     });
   }
 
@@ -81,5 +88,16 @@ export class GameConnection {
 
   sendDrop(uid: string): void {
     this.room.send(MessageType.Drop, { uid });
+  }
+
+  sendChat(text: string): void {
+    this.room.send(MessageType.Chat, { text });
+  }
+
+  onChat(cb: (c: ChatBroadcast) => void): void {
+    this.chatHandler = cb;
+    const queued = this.pendingChats;
+    this.pendingChats = [];
+    for (const c of queued) cb(c);
   }
 }

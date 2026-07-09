@@ -228,6 +228,32 @@ describe("GameRoom — lobby, início de partida e visão", () => {
     }
   });
 
+  it("chat: broadcast com nome do remetente; vazio e não-string são descartados", async () => {
+    const room = await createLobby();
+    const c1 = await colyseus.connectTo(room, { name: "Ana" });
+    const c2 = await colyseus.connectTo(room, { name: "Beto" });
+
+    const recebido = c2.waitForMessage(MessageType.Chat);
+    c1.send(MessageType.Chat, { text: "  olá grupo!  " });
+    expect(await recebido).toMatchObject({
+      senderId: c1.sessionId,
+      name: "Ana",
+      text: "olá grupo!",
+    });
+
+    // inválidos não derrubam nem broadcastam
+    c1.send(MessageType.Chat, { text: "   " });
+    c1.send(MessageType.Chat, { text: 42 });
+    c1.send(MessageType.Chat, {});
+    await room.waitForMessage(MessageType.Chat);
+
+    // mensagem longa é truncada em 140
+    const longo = "x".repeat(200);
+    const truncado = c2.waitForMessage(MessageType.Chat);
+    c1.send(MessageType.Chat, { text: longo });
+    expect((await truncado).text).toHaveLength(140);
+  });
+
   it("move antes do início da partida é ignorado sem crash", async () => {
     const room = await createLobby();
     const c1 = await colyseus.connectTo(room, { name: "Ana" });

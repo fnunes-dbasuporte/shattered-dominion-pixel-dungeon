@@ -12,6 +12,7 @@ import {
 } from "@shattered-dominion/shared";
 import type { GameConnection } from "../net/connection.js";
 import { InventoryPanel } from "../ui/inventory.js";
+import { ChatBox } from "../ui/chat.js";
 
 const ITEM_GLYPHS: Record<string, { char: string; color: string }> = {
   weapon: { char: "†", color: "#cfd2d8" },
@@ -103,6 +104,8 @@ export class GameScene extends Phaser.Scene {
   private atores = new Map<string, ActorSprite>();
   private itensChao = new Map<string, Phaser.GameObjects.Text>();
   private invPanel!: InventoryPanel;
+  private chat!: ChatBox;
+  private balloons = new Map<string, Phaser.GameObjects.Text>();
   private statusText!: Phaser.GameObjects.Text;
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private lastSentAt = 0;
@@ -182,8 +185,45 @@ export class GameScene extends Phaser.Scene {
     this.input.keyboard!.on("keydown-I", () => this.invPanel.toggle());
     this.input.keyboard!.on("keydown-ESC", () => this.invPanel.close());
 
+    this.chat = new ChatBox(
+      (text) => this.conn.sendChat(text),
+      (open) => {
+        this.input.keyboard!.enabled = !open;
+        if (open) this.input.keyboard!.resetKeys();
+      },
+    );
+    this.input.keyboard!.on("keydown-ENTER", () => {
+      if (!this.invPanel.isOpen) this.chat.open();
+    });
+    this.conn.onChat((c) => {
+      this.pushLog(`${c.name}: ${c.text}`);
+      this.showBalloon(c.senderId, c.text);
+    });
+
     this.reposicionarUi(); // reposiciona incluindo o statusText recém-criado
     this.conn.onVision((v) => this.onVision(v));
+  }
+
+  /** Balão curto sobre o herói; some após 4s (morre junto se o ator sair do FOV). */
+  private showBalloon(actorId: string, text: string): void {
+    const sprite = this.atores.get(actorId);
+    if (!sprite) return;
+    this.balloons.get(actorId)?.destroy();
+    const curto = text.length > 26 ? `${text.slice(0, 26)}…` : text;
+    const balloon = this.add
+      .text(0, -TILE_PX - 4, curto, {
+        fontFamily: "monospace",
+        fontSize: "10px",
+        color: "#0b0a10",
+        backgroundColor: "#e8e6f0",
+        padding: { x: 4, y: 2 },
+      })
+      .setOrigin(0.5, 1);
+    sprite.container.add(balloon);
+    this.balloons.set(actorId, balloon);
+    this.time.delayedCall(4000, () => {
+      if (balloon.active) balloon.destroy();
+    });
   }
 
   private reposicionarUi(): void {
@@ -196,7 +236,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   override update(time: number): void {
-    if (this.invPanel.isOpen) return; // painel aberto pausa o input do jogo
+    if (this.invPanel.isOpen || this.chat.isOpen) return; // UI aberta pausa o input do jogo
     const dir = this.readKeyboardDir();
 
     if (!this.you.alive) {

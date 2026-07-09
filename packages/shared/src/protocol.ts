@@ -16,6 +16,8 @@ export const MessageType = {
   Use: "use",
   /** cliente → servidor: dropar { uid }. */
   Drop: "drop",
+  /** cliente → servidor { text } · servidor → todos { senderId, name, text }. */
+  Chat: "chat",
   /** servidor → cliente: só o que ESTE jogador vê (anti-cheat de visão). */
   Vision: "vision",
   /** servidor → todos: partida começou (dimensões do andar; a seed é secreta). */
@@ -27,6 +29,14 @@ export type GamePhase = "lobby" | "playing";
 export interface MoveMessage {
   dx: number;
   dy: number;
+}
+
+export const CHAT_MAX_LENGTH = 140;
+
+export interface ChatBroadcast {
+  senderId: string;
+  name: string;
+  text: string;
 }
 
 export interface MatchStartedMessage {

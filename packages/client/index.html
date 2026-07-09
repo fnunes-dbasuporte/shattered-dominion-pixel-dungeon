@@ -239,6 +239,28 @@
         text-align: center;
         margin-top: 10px;
       }
+
+      /* ── chat ── */
+      #chat {
+        position: fixed;
+        left: 0;
+        right: 0;
+        bottom: 64px;
+        display: flex;
+        justify-content: center;
+        z-index: 15;
+      }
+      #chat input {
+        width: min(480px, 90vw);
+        background: rgba(23, 20, 31, 0.95);
+        color: #e8e6f0;
+        border: 1px solid #4da3e8;
+        border-radius: 6px;
+        padding: 10px 12px;
+        font-family: monospace;
+        font-size: 13px;
+        outline: none;
+      }
     </style>
   </head>
   <body>
