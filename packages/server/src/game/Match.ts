@@ -74,6 +74,7 @@ interface ActorBase {
 
 export interface PlayerActor extends ActorBase {
   kind: "player";
+  colorIndex: number;
   alive: boolean;
   level: number;
   xp: number;
@@ -156,7 +157,7 @@ export class Match {
   // ── jogadores ──────────────────────────────────────────────────────
 
   /** Posiciona o jogador no próximo spawn livre da sala de entrada (ou em `at`). */
-  addPlayer(id: string, name: string, at?: Vec2): Vec2 {
+  addPlayer(id: string, name: string, at?: Vec2, colorIndex = 0): Vec2 {
     const spawn =
       at ??
       this.level.spawnPoints.find((p) => !this.occupancy.has(this.level.grid.index(p.x, p.y)));
@@ -165,6 +166,7 @@ export class Match {
     const stats = heroStats(1);
     const player: PlayerActor = {
       kind: "player",
+      colorIndex,
       id,
       name,
       x: spawn.x,
@@ -203,13 +205,13 @@ export class Match {
    * livre mais próximo da escada ▲) com kit básico — Adaga equipada e uma
    * Ração — para não entrar de mãos vazias no meio da run.
    */
-  addPlayerMidRun(id: string, name: string): Vec2 {
+  addPlayerMidRun(id: string, name: string, colorIndex = 0): Vec2 {
     const livre = this.level.spawnPoints.find(
       (p) => !this.occupancy.has(this.level.grid.index(p.x, p.y)),
     );
     const spot = livre ?? this.findFreeTileNear(this.level.stairsUp);
     if (!spot) throw new Error("Match.addPlayerMidRun: sem tile livre");
-    this.addPlayer(id, name, spot);
+    this.addPlayer(id, name, spot, colorIndex);
     const player = this.actors.get(id) as PlayerActor;
 
     const dagger: ItemInstance = { uid: `item-${++this.itemSeq}`, itemId: "dagger", upgrade: 0 };
@@ -974,6 +976,7 @@ export class Match {
           id: other.id,
           name: other.name,
           kind: other.kind,
+          colorIndex: isPlayer(other) ? other.colorIndex : 0,
           x: other.x,
           y: other.y,
           hp: other.hp,

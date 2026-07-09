@@ -62,14 +62,14 @@ export class GameConnection {
     this.leaveHandler = cb;
   }
 
-  static async createRoom(name: string): Promise<GameConnection> {
+  static async createRoom(name: string, color: number): Promise<GameConnection> {
     const client = new Client(endpoint);
-    return new GameConnection(await client.create("game", { name }));
+    return new GameConnection(await client.create("game", { name, color }));
   }
 
-  static async joinByCode(code: string, name: string): Promise<GameConnection> {
+  static async joinByCode(code: string, name: string, color: number): Promise<GameConnection> {
     const client = new Client(endpoint);
-    return new GameConnection(await client.joinById(code.trim().toUpperCase(), { name }));
+    return new GameConnection(await client.joinById(code.trim().toUpperCase(), { name, color }));
   }
 
   get sessionId(): string {

@@ -1,8 +1,8 @@
 import Phaser from "phaser";
 import {
   Grid,
+  PLAYER_COLORS,
   TileType,
-  hashSeed,
   type ActorKind,
   type GameEvent,
   type MatchStartedMessage,
@@ -44,10 +44,6 @@ function dimColor(color: number, factor = 0.38): number {
   return (r << 16) | (g << 8) | b;
 }
 
-const CORES_JOGADOR = [
-  0xe8554d, 0x4da3e8, 0x5fce6b, 0xe8c04d, 0xb35de8, 0x4de8d3, 0xe88a4d, 0xdd6fb1,
-];
-
 const CORES_MOB: Record<string, number> = {
   rat: 0x8a7a66,
   gnoll: 0x9aa14e,
@@ -62,6 +58,7 @@ interface ActorSprite {
   rect: Phaser.GameObjects.Rectangle;
   hpBar: Phaser.GameObjects.Graphics;
   kind: ActorKind;
+  color: number;
   x: number;
   y: number;
 }
@@ -410,7 +407,7 @@ export class GameScene extends Phaser.Scene {
     if (!sprite) return;
     sprite.rect.setFillStyle(0xffffff);
     this.time.delayedCall(90, () => {
-      if (sprite.container.active) sprite.rect.setFillStyle(this.actorColor(id, sprite.kind));
+      if (sprite.container.active) sprite.rect.setFillStyle(sprite.color);
     });
   }
 
@@ -465,15 +462,12 @@ export class GameScene extends Phaser.Scene {
     return appeared;
   }
 
-  private actorColor(id: string, kind: ActorKind): number {
-    if (kind === "player") return CORES_JOGADOR[hashSeed(id) % CORES_JOGADOR.length];
-    return CORES_MOB[kind] ?? 0xffffff;
-  }
-
   private createActorSprite(actor: VisibleActor): ActorSprite {
     const souEu = actor.id === this.conn.sessionId;
     const ehMob = actor.kind !== "player";
-    const cor = this.actorColor(actor.id, actor.kind);
+    const cor = ehMob
+      ? (CORES_MOB[actor.kind] ?? 0xffffff)
+      : PLAYER_COLORS[actor.colorIndex % PLAYER_COLORS.length];
 
     const tamanho = ehMob ? TILE_PX - 12 : TILE_PX - 8;
     const rect = this.add.rectangle(0, 0, tamanho, tamanho, cor);
@@ -496,7 +490,7 @@ export class GameScene extends Phaser.Scene {
     if (souEu) {
       this.cameras.main.startFollow(container, true, 0.12, 0.12);
     }
-    return { container, rect, hpBar, kind: actor.kind, x: actor.x, y: actor.y };
+    return { container, rect, hpBar, kind: actor.kind, color: cor, x: actor.x, y: actor.y };
   }
 
   /** Mini-barra sobre atores feridos (some quando o HP está cheio). */

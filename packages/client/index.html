@@ -129,9 +129,20 @@
         gap: 4px;
         font-size: 13px;
       }
-      .jogadores li::before {
-        content: "◆ ";
-        color: #5fce6b;
+      .cores {
+        display: flex;
+        gap: 8px;
+      }
+      .cor {
+        width: 26px;
+        height: 26px;
+        border-radius: 50%;
+        border: 2px solid transparent;
+        cursor: pointer;
+        padding: 0;
+      }
+      .cor.ativa {
+        border-color: #ffffff;
       }
       .dica {
         color: #9a96ad;

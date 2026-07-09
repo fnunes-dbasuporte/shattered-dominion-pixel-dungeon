@@ -4,6 +4,8 @@ import {
   CHAT_MAX_LENGTH,
   MAX_PLAYERS,
   MessageType,
+  PLAYER_COLORS,
+  hashSeed,
   type ChatBroadcast,
   type GamePhase,
   type MatchStartedMessage,
@@ -15,6 +17,7 @@ import { generateRoomCode, randomSeed } from "../game/roomCode.js";
 export class PlayerState extends Schema {
   @type("string") sessionId = "";
   @type("string") name = "";
+  @type("uint8") colorIndex = 0;
 }
 
 export class GameState extends Schema {
@@ -86,10 +89,11 @@ export class GameRoom extends Room {
     console.log(`[GameRoom ${this.roomId}] lobby criado`);
   }
 
-  override onJoin(client: Client, options?: { name?: unknown }): void {
+  override onJoin(client: Client, options?: { name?: unknown; color?: unknown }): void {
     const player = new PlayerState();
     player.sessionId = client.sessionId;
     player.name = sanitizeName(options?.name, client.sessionId);
+    player.colorIndex = sanitizeColor(options?.color, client.sessionId);
     this.state.players.set(client.sessionId, player);
 
     if (!this.state.hostSessionId) {
@@ -99,7 +103,7 @@ export class GameRoom extends Room {
     // entrada mid-run: nasce no andar do grupo com kit básico; a visão
     // inicial flui pelo próximo tick (jogador novo sempre recebe tudo)
     if (this.state.phase === "playing" && this.match) {
-      this.match.addPlayerMidRun(client.sessionId, player.name);
+      this.match.addPlayerMidRun(client.sessionId, player.name, player.colorIndex);
       const started: MatchStartedMessage = {
         width: this.match.level.width,
         height: this.match.level.height,
@@ -171,7 +175,7 @@ export class GameRoom extends Room {
     const seed = this.testSeed ?? randomSeed();
     this.match = Match.fromSeed(seed, 1);
     for (const [sessionId, player] of this.state.players) {
-      this.match.addPlayer(sessionId, player.name);
+      this.match.addPlayer(sessionId, player.name, undefined, player.colorIndex);
     }
 
     this.state.phase = "playing";
@@ -209,4 +213,12 @@ export class GameRoom extends Room {
 function sanitizeName(raw: unknown, sessionId: string): string {
   const name = typeof raw === "string" ? raw.trim().slice(0, 16) : "";
   return name.length > 0 ? name : `Aventureiro-${sessionId.slice(0, 4)}`;
+}
+
+/** Cor escolhida no lobby; fora do intervalo cai num hash estável da sessão. */
+function sanitizeColor(raw: unknown, sessionId: string): number {
+  if (typeof raw === "number" && Number.isInteger(raw) && raw >= 0 && raw < PLAYER_COLORS.length) {
+    return raw;
+  }
+  return hashSeed(sessionId) % PLAYER_COLORS.length;
 }

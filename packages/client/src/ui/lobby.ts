@@ -1,11 +1,14 @@
 import { getStateCallbacks } from "@colyseus/sdk";
-import type { MatchStartedMessage } from "@shattered-dominion/shared";
+import { PLAYER_COLORS, type MatchStartedMessage } from "@shattered-dominion/shared";
 import { GameConnection } from "../net/connection.js";
 
 interface PlayerLike {
   sessionId: string;
   name: string;
+  colorIndex: number;
 }
+
+const hex = (c: number) => `#${c.toString(16).padStart(6, "0")}`;
 
 export interface LobbyResult {
   conn: GameConnection;
@@ -27,6 +30,11 @@ export function runLobby(): Promise<LobbyResult> {
       <div id="painel-entrada">
         <label for="nome">Seu nome</label>
         <input id="nome" maxlength="16" placeholder="Aventureiro" autocomplete="off" />
+        <label>Sua cor</label>
+        <div class="cores" id="cores">${PLAYER_COLORS.map(
+          (c, i) =>
+            `<button type="button" class="cor" data-cor="${i}" style="background:${hex(c)}"></button>`,
+        ).join("")}</div>
         <button id="btn-criar">Criar sala</button>
         <p class="divisor">— ou entre numa sala —</p>
         <label for="codigo">Código da sala</label>
@@ -53,6 +61,21 @@ export function runLobby(): Promise<LobbyResult> {
 
   nomeInput.value = localStorage.getItem("sd:nome") ?? "";
 
+  // seletor de cor persistido
+  let corEscolhida = Number(localStorage.getItem("sd:cor") ?? 0) % PLAYER_COLORS.length;
+  const swatches = [...ui.querySelectorAll<HTMLButtonElement>(".cor")];
+  const marcarCor = () => {
+    swatches.forEach((b, i) => b.classList.toggle("ativa", i === corEscolhida));
+  };
+  swatches.forEach((b, i) =>
+    b.addEventListener("click", () => {
+      corEscolhida = i;
+      localStorage.setItem("sd:cor", String(i));
+      marcarCor();
+    }),
+  );
+  marcarCor();
+
   return new Promise<LobbyResult>((resolve) => {
     const entrar = async (fazerConexao: () => Promise<GameConnection>) => {
       erro.textContent = "";
@@ -72,14 +95,16 @@ export function runLobby(): Promise<LobbyResult> {
     };
 
     btnCriar.addEventListener("click", () => {
-      void entrar(() => GameConnection.createRoom(nomeInput.value.trim()));
+      void entrar(() => GameConnection.createRoom(nomeInput.value.trim(), corEscolhida));
     });
     btnEntrar.addEventListener("click", () => {
       if (codigoInput.value.trim().length !== 6) {
         erro.textContent = "O código tem 6 caracteres.";
         return;
       }
-      void entrar(() => GameConnection.joinByCode(codigoInput.value, nomeInput.value.trim()));
+      void entrar(() =>
+        GameConnection.joinByCode(codigoInput.value, nomeInput.value.trim(), corEscolhida),
+      );
     });
     codigoInput.addEventListener("keydown", (ev) => {
       if (ev.key === "Enter") btnEntrar.click();
@@ -93,14 +118,20 @@ export function runLobby(): Promise<LobbyResult> {
 
     const lista = el<HTMLUListElement>("#lista-jogadores");
     const dica = el<HTMLParagraphElement>("#dica-sala");
-    const jogadores = new Map<string, string>();
+    const jogadores = new Map<string, { nome: string; cor: number }>();
     let hostId = "";
 
     const render = () => {
       lista.innerHTML = "";
-      for (const [id, nome] of jogadores) {
+      for (const [id, { nome, cor }] of jogadores) {
         const li = document.createElement("li");
-        li.textContent = `${nome}${id === hostId ? " (host)" : ""}${id === conn.sessionId ? " — você" : ""}`;
+        const diamante = document.createElement("span");
+        diamante.textContent = "◆ ";
+        diamante.style.color = hex(PLAYER_COLORS[cor % PLAYER_COLORS.length]);
+        li.appendChild(diamante);
+        li.append(
+          `${nome}${id === hostId ? " (host)" : ""}${id === conn.sessionId ? " — você" : ""}`,
+        );
         lista.appendChild(li);
       }
       const souHost = hostId === conn.sessionId;
@@ -113,7 +144,7 @@ export function runLobby(): Promise<LobbyResult> {
     const $ = getStateCallbacks(conn.room);
     const state = $(conn.room.state);
     state.players.onAdd((p: PlayerLike, id: string) => {
-      jogadores.set(id, p.name);
+      jogadores.set(id, { nome: p.name, cor: p.colorIndex });
       render();
     });
     state.players.onRemove((_p: PlayerLike, id: string) => {

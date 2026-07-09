@@ -47,10 +47,17 @@ export interface MatchStartedMessage {
 
 export type ActorKind = "player" | MobKind;
 
+/** Paleta de cores dos heróis — índice validado no servidor (0..7). */
+export const PLAYER_COLORS = [
+  0xe8554d, 0x4da3e8, 0x5fce6b, 0xe8c04d, 0xb35de8, 0x4de8d3, 0xe88a4d, 0xdd6fb1,
+] as const;
+
 export interface VisibleActor {
   id: string;
   name: string;
   kind: ActorKind;
+  /** índice em PLAYER_COLORS (jogadores); 0 para mobs. */
+  colorIndex: number;
   x: number;
   y: number;
   hp: number;
