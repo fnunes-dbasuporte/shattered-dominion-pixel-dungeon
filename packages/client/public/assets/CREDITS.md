@@ -12,13 +12,13 @@ o jogo é um clone de mecânicas com identidade visual própria.
 Os prompts exatos, IDs de job e URLs de origem de cada asset estão versionados
 em `tools/assets/manifest.json`. Regeneração: `pnpm assets:gen --force`.
 
-| Grupo      | Conteúdo                                                                                       | Origem                              |
-| ---------- | ---------------------------------------------------------------------------------------------- | ----------------------------------- |
-| `tiles/`   | parede, 3 chãos, água, grama, brasas, porta, escadas (16×16)                                   | lote tiles-pro                      |
+| Grupo      | Conteúdo                                                                                                                     | Origem                              |
+| ---------- | ---------------------------------------------------------------------------------------------------------------------------- | ----------------------------------- |
+| `tiles/`   | parede, 3 chãos, água, grama, brasas, porta, escadas (16×16)                                                                 | lote tiles-pro                      |
 | `sprites/` | Guerreiro (idle/walk/attack/death ×4 direções, 8 cores), Rato, Gnoll, Caranguejo, Amálgama de Lodo — boss 60px (walk/attack) | personagens + templates de animação |
-| `items/`   | armas, armaduras, 6 poções, pergaminho, ração, ouro, ankh/amuleto (32×32)                      | lote de objetos                     |
-| `fx/`      | slash, poof, brilho de level up                                                                | lote de objetos                     |
-| `ui/`      | painel de moldura (192×192, border-image)                                                      | ui-asset                            |
+| `items/`   | armas, armaduras, 6 poções, pergaminho, ração, ouro, ankh/amuleto (32×32)                                                    | lote de objetos                     |
+| `fx/`      | slash, poof, brilho de level up                                                                                              | lote de objetos                     |
+| `ui/`      | painel de moldura (192×192, border-image)                                                                                    | ui-asset                            |
 
 As 8 variações de cor do herói são recolor programático (re-matiz do pano
 teal) feito por `tools/assets/compose.ts` — 1 geração, 8 saídas.

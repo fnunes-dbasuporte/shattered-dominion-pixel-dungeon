@@ -109,7 +109,7 @@ export async function composeCharacter(entry: CharacterEntry, force: boolean): P
 
   mkdirSync(dirname(sheetPath), { recursive: true });
   writeFileSync(sheetPath, PNG.sync.write(sheet));
-  writeFileSync(metaPath, JSON.stringify(meta, null, 2));
+  writeFileSync(metaPath, `${JSON.stringify(meta, null, 2)}\n`);
   console.log(`composto ${entry.id} → assets/${entry.out} (${rows.length} linhas × ${columns})`);
 
   if (entry.recolor) recolorSheet(entry, sheet, sheetPath);
