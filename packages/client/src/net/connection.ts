@@ -24,6 +24,8 @@ export class GameConnection {
   private chatHandler?: (c: ChatBroadcast) => void;
   private leaveHandler?: (code: number) => void;
   private readonly startedPromise: Promise<MatchStartedMessage>;
+  /** RTT medido (ms); -1 até a primeira resposta. */
+  pingMs = -1;
 
   private constructor(readonly room: Room) {
     sessionStorage.setItem(RECONNECT_TOKEN_KEY, room.reconnectionToken);
@@ -39,6 +41,14 @@ export class GameConnection {
       else this.pendingChats.push(c);
     });
     room.onLeave((code) => this.leaveHandler?.(code));
+
+    room.onMessage(MessageType.Pong, (p: { t?: number }) => {
+      if (typeof p?.t === "number") this.pingMs = Math.round(performance.now() - p.t);
+    });
+    const pingTimer = setInterval(() => {
+      room.send(MessageType.Ping, { t: performance.now() });
+    }, 2000);
+    room.onLeave(() => clearInterval(pingTimer));
   }
 
   /**

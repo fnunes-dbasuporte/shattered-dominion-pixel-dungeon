@@ -42,6 +42,8 @@ export class GameRoom extends Room {
 
   private match?: Match;
   private testSeed?: number;
+  /** durações dos últimos ticks (ms) — janela de ~20 min a 10 ticks/s. */
+  private tickDurations: number[] = [];
 
   override onCreate(options: CreateOptions = {}): void {
     // O roomId É o código do lobby que os jogadores digitam.
@@ -74,6 +76,9 @@ export class GameRoom extends Room {
     this.onMessage(MessageType.Drop, (client, payload: unknown) => {
       if (this.state.phase !== "playing") return;
       this.match?.drop(client.sessionId, (payload as { uid?: unknown })?.uid);
+    });
+    this.onMessage(MessageType.Ping, (client, payload: unknown) => {
+      client.send(MessageType.Pong, payload ?? {});
     });
     this.onMessage(MessageType.Chat, (client, payload: unknown) => {
       const raw = (payload as { text?: unknown })?.text;
@@ -198,7 +203,28 @@ export class GameRoom extends Room {
   /** Um tick da simulação — público para os testes dirigirem manualmente. */
   tickUpdate(): void {
     if (this.state.phase !== "playing" || !this.match) return;
+    const t0 = performance.now();
     this.flushVisions(this.match.update());
+    this.tickDurations.push(performance.now() - t0);
+    if (this.tickDurations.length > 12_000) this.tickDurations.shift();
+  }
+
+  /** Métricas da duração dos ticks — usadas pelo load test. */
+  tickStats(): { count: number; avg: number; p95: number; max: number } {
+    const n = this.tickDurations.length;
+    if (n === 0) return { count: 0, avg: 0, p95: 0, max: 0 };
+    const sorted = [...this.tickDurations].sort((a, b) => a - b);
+    return {
+      count: n,
+      avg: sorted.reduce((a, b) => a + b, 0) / n,
+      p95: sorted[Math.min(n - 1, Math.floor(n * 0.95))],
+      max: sorted[n - 1],
+    };
+  }
+
+  /** Acesso à simulação — usado pelo load test para popular o estresse. */
+  get currentMatch(): Match | undefined {
+    return this.match;
   }
 
   private flushVisions(visions: Map<string, VisionMessage>): void {

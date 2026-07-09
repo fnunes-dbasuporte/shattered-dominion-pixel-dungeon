@@ -348,6 +348,14 @@ export class Match {
     return id;
   }
 
+  /** Spawna até n mobs extras (estresse do load test); retorna quantos nasceram. */
+  spawnRandomMobs(n: number): number {
+    let spawned = 0;
+    for (let i = 0; i < n; i++) if (this.trySpawnRandomMob()) spawned++;
+    this.mobCap = Math.max(this.mobCap, this.mobCount);
+    return spawned;
+  }
+
   /** Acesso direto ao ator — apenas para preparação de cenários em testes. */
   actorForTest(id: string): Actor | undefined {
     return this.actors.get(id);

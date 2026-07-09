@@ -107,6 +107,8 @@ export class GameScene extends Phaser.Scene {
   private keys!: Record<string, Phaser.Input.Keyboard.Key>;
   private lastSentAt = 0;
   private lastSentDir = "";
+  /** compensação de jitter: visões seguram até 2 ticks (200ms) antes de aplicar. */
+  private visionQueue: { v: VisionMessage; at: number }[] = [];
 
   constructor() {
     super("Game");
@@ -204,7 +206,7 @@ export class GameScene extends Phaser.Scene {
     });
 
     this.reposicionarUi(); // reposiciona incluindo o statusText recém-criado
-    this.conn.onVision((v) => this.onVision(v));
+    this.conn.onVision((v) => this.visionQueue.push({ v, at: performance.now() }));
   }
 
   /** Balão curto sobre o herói; some após 4s (morre junto se o ator sair do FOV). */
@@ -239,6 +241,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   override update(time: number): void {
+    this.drainVisionQueue();
     if (this.invPanel.isOpen || this.chat.isOpen) return; // UI aberta pausa o input do jogo
     const dir = this.readKeyboardDir();
 
@@ -277,6 +280,17 @@ export class GameScene extends Phaser.Scene {
     const dx = (k.D.isDown || k.RIGHT.isDown ? 1 : 0) - (k.A.isDown || k.LEFT.isDown ? 1 : 0);
     const dy = (k.S.isDown || k.DOWN.isDown ? 1 : 0) - (k.W.isDown || k.UP.isDown ? 1 : 0);
     return dx === 0 && dy === 0 ? null : { x: dx, y: dy };
+  }
+
+  /** Aplica visões seguradas por 200ms (ou antes, se a fila acumular >2). */
+  private drainVisionQueue(): void {
+    const now = performance.now();
+    while (
+      this.visionQueue.length > 0 &&
+      (now - this.visionQueue[0].at >= 200 || this.visionQueue.length > 2)
+    ) {
+      this.onVision(this.visionQueue.shift()!.v);
+    }
   }
 
   private onVision(v: VisionMessage): void {

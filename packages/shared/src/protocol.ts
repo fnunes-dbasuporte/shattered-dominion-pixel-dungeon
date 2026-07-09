@@ -18,6 +18,9 @@ export const MessageType = {
   Drop: "drop",
   /** cliente → servidor { text } · servidor → todos { senderId, name, text }. */
   Chat: "chat",
+  /** cliente → servidor { t } · servidor devolve Pong { t } — medição de RTT. */
+  Ping: "ping",
+  Pong: "pong",
   /** servidor → cliente: só o que ESTE jogador vê (anti-cheat de visão). */
   Vision: "vision",
   /** servidor → todos: partida começou (dimensões do andar; a seed é secreta). */
