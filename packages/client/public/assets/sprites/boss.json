@@ -1,6 +1,6 @@
 {
-  "frameWidth": 56,
-  "frameHeight": 56,
+  "frameWidth": 64,
+  "frameHeight": 64,
   "columns": 7,
   "rows": {
     "still-south": {
@@ -21,19 +21,19 @@
     },
     "walk-south": {
       "row": 4,
-      "count": 4
-    },
-    "walk-east": {
-      "row": 5,
-      "count": 4
+      "count": 7
     },
     "walk-north": {
-      "row": 6,
-      "count": 4
+      "row": 5,
+      "count": 7
     },
     "walk-west": {
+      "row": 6,
+      "count": 7
+    },
+    "walk-east": {
       "row": 7,
-      "count": 4
+      "count": 7
     },
     "attack-south": {
       "row": 8,

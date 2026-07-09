@@ -123,6 +123,10 @@
           "out": "items/ankh.png"
         },
         {
+          "url": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/cff6e754-723a-49f1-878e-f8caf6e7545a/bd605e4c-7f82-4b98-a1dc-718568470f2e/rotations/frame_14.png",
+          "out": "items/amulet.png"
+        },
+        {
           "url": "https://backblaze.pixellab.ai/file/pixellab-characters/objects/cff6e754-723a-49f1-878e-f8caf6e7545a/bd605e4c-7f82-4b98-a1dc-718568470f2e/rotations/frame_15.png",
           "out": "fx/slash.png"
         },
@@ -167,12 +171,11 @@
     },
     {
       "id": "rat",
-      "pixellabId": "5a785db8-f3ec-40ed-a4eb-e214d0308985",
-      "prompt": "mangy sewer rat with matted brown fur, long pink tail, hunched and twitchy, beady red eyes (quadruped/cat, 16px upscale 2x — nativo 32px pendente: geracoes de rato 32 falharam/travaram 3x no Pixellab)",
+      "pixellabId": "54a86ef9-9737-41d2-a742-00657ad2f847",
+      "prompt": "mangy sewer rat, hunched low to the ground, matted brown fur, long thin pink tail, pointed snout with whiskers, beady red eyes, tiny 16-bit dungeon crawler sprite, crisp pixels, 1-pixel dark outline, limited muted fantasy palette, no antialiasing (standard 32px quadruped/cat — v3 nao suporta quadrupede; substitui o interino 16px upscale)",
       "canvas": 56,
-      "scale": 2,
       "out": "sprites/rat.png",
-      "zip": "https://api.pixellab.ai/mcp/characters/5a785db8-f3ec-40ed-a4eb-e214d0308985/download",
+      "zip": "https://api.pixellab.ai/mcp/characters/54a86ef9-9737-41d2-a742-00657ad2f847/download",
       "animMap": {
         "running": "walk",
         "acting_angry": "attack"
@@ -200,6 +203,19 @@
       "animMap": {
         "animating": "walk",
         "cross_punch_attack": "attack"
+      }
+    },
+    {
+      "id": "boss",
+      "pixellabId": "6b85d1c2-e8d1-430b-9e01-4a244d187989",
+      "prompt": "Create one game-ready 32x32 pixel-art RPG boss monster sprite inspired by classic roguelike dungeon crawlers. A hulking amorphous mound of dark green sewer sludge, dripping thick ooze, one huge pale yellow eye off-center, rusty debris and a broken bone half-sunk in its body, bubbles bursting on its surface. Style: tiny 16-bit dungeon crawler sprite, slight 3/4 top-down view, crisp pixels, 1-pixel dark outline, limited muted fantasy palette, no antialiasing. (mode v3 size 32 — arte real 60x60, por isso canvas 64; walk east veio em pasta separada por retry de falha; mapeamento VERIFICADO por analise de movimento: walk 20-31, attack 44-60)",
+      "canvas": 64,
+      "out": "sprites/boss.png",
+      "zip": "https://api.pixellab.ai/mcp/characters/6b85d1c2-e8d1-430b-9e01-4a244d187989/download",
+      "animMap": {
+        "walk": "walk",
+        "walk-87877fa1": "walk",
+        "attack": "attack"
       }
     }
   ]
