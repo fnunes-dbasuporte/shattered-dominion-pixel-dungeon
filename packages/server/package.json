@@ -10,7 +10,8 @@
     "build": "tsc -p tsconfig.build.json",
     "start": "node dist/index.js",
     "test": "vitest run",
-    "test:watch": "vitest"
+    "test:watch": "vitest",
+    "loadtest": "tsx src/loadtest.ts"
   },
   "dependencies": {
     "@colyseus/core": "^0.17.44",
