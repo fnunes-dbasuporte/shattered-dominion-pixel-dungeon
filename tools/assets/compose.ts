@@ -1,48 +1,55 @@
 /**
- * Compõe spritesheets de personagens a partir dos frames individuais do
- * Pixellab (manifest.characters) e gera o meta JSON consumido pelo Phaser.
+ * Compõe spritesheets de personagens a partir do ZIP de download do
+ * Pixellab (rotations/ + animations/<pasta>/<direção>/frame_NNN.png) e gera
+ * o meta JSON consumido pelo Phaser.
  *
- * Layout da sheet: uma linha por (animação, direção) na ordem do manifest,
- * `columns` = maior contagem de frames; frame index = linha*columns + coluna.
- * A primeira linha de cada direção sem animação é a rotação parada.
- *
- * Uso: pnpm assets:gen (chama download + compose) [--only <id>] [--force]
+ * Layout da sheet: uma linha por (animação, direção); `columns` = maior
+ * contagem de frames; frame index = linha*columns + coluna. As 4 primeiras
+ * linhas são as rotações paradas (still-south/east/north/west).
  */
 import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import { dirname, join } from "node:path";
 import { PNG } from "pngjs";
+import { unzipSync } from "fflate";
 
 export interface CharacterEntry {
   id: string;
   pixellabId: string;
   prompt: string;
+  /** canvas padrão dos frames (personagens 16px → 24). */
   canvas: number;
   out: string;
-  rotations: Record<string, string>;
-  animations: Record<string, Record<string, string[]>>;
-  /** gera variações de cor re-matizadas (índices da paleta do jogo). */
+  zip: string;
+  /** pasta de animação no zip → nome canônico (walk/idle/attack/death). */
+  animMap: Record<string, string>;
+  /** gera 8 variações de cor re-matizadas (paleta dos jogadores). */
   recolor?: boolean;
+}
+
+interface ZipMetadata {
+  states: {
+    folder: string;
+    frames: {
+      rotations: Record<string, string>;
+      animations: Record<string, Record<string, string[]>>;
+    };
+  }[];
 }
 
 interface SheetMeta {
   frameWidth: number;
   frameHeight: number;
   columns: number;
-  /** nome "anim-dir" → { row, count } */
   rows: Record<string, { row: number; count: number }>;
 }
 
 const ROOT = join(import.meta.dirname, "..", "..");
 const OUT_DIR = join(ROOT, "packages", "client", "public", "assets");
 
+const DIRECTION_ORDER = ["south", "east", "north", "west"];
+
 /** Paleta dos jogadores (mesma de PLAYER_COLORS no shared) — alvo do recolor. */
 const PLAYER_HUES = [4, 207, 127, 45, 277, 171, 24, 324];
-
-async function fetchPng(url: string): Promise<PNG> {
-  const res = await fetch(url);
-  if (!res.ok) throw new Error(`HTTP ${res.status} em ${url}`);
-  return PNG.sync.read(Buffer.from(await res.arrayBuffer()));
-}
 
 export async function composeCharacter(entry: CharacterEntry, force: boolean): Promise<void> {
   const sheetPath = join(OUT_DIR, entry.out);
@@ -52,32 +59,48 @@ export async function composeCharacter(entry: CharacterEntry, force: boolean): P
     return;
   }
 
-  // monta a lista de linhas: rotações paradas primeiro, depois animações
-  const rows: { name: string; urls: string[] }[] = [];
-  for (const [dir, url] of Object.entries(entry.rotations)) {
-    rows.push({ name: `still-${dir}`, urls: [url] });
+  const res = await fetch(entry.zip);
+  if (!res.ok) throw new Error(`${entry.id}: HTTP ${res.status} ao baixar zip`);
+  const buf = Buffer.from(await res.arrayBuffer());
+  if (buf.subarray(0, 2).toString() !== "PK") {
+    throw new Error(`${entry.id}: resposta não é zip — ${buf.subarray(0, 120).toString()}`);
   }
-  for (const [anim, dirs] of Object.entries(entry.animations)) {
-    for (const [dir, urls] of Object.entries(dirs)) {
-      rows.push({ name: `${anim}-${dir}`, urls });
+  const files = unzipSync(new Uint8Array(buf));
+  const metadata = JSON.parse(Buffer.from(files["metadata.json"]).toString("utf8")) as ZipMetadata;
+  const frames = metadata.states[0].frames;
+
+  // linhas: rotações paradas primeiro, depois animações na ordem do animMap
+  const rows: { name: string; paths: string[] }[] = [];
+  for (const dir of DIRECTION_ORDER) {
+    if (frames.rotations[dir]) rows.push({ name: `still-${dir}`, paths: [frames.rotations[dir]] });
+  }
+  for (const [folder, animName] of Object.entries(entry.animMap)) {
+    const dirs = frames.animations[folder];
+    if (!dirs) throw new Error(`${entry.id}: animação "${folder}" não está no zip`);
+    for (const dir of DIRECTION_ORDER) {
+      if (dirs[dir]) rows.push({ name: `${animName}-${dir}`, paths: [...dirs[dir]].sort() });
     }
   }
 
-  const columns = Math.max(...rows.map((r) => r.urls.length));
+  const columns = Math.max(...rows.map((r) => r.paths.length));
   const size = entry.canvas;
   const sheet = new PNG({ width: columns * size, height: rows.length * size });
 
   const meta: SheetMeta = { frameWidth: size, frameHeight: size, columns, rows: {} };
   for (let r = 0; r < rows.length; r++) {
-    meta.rows[rows[r].name] = { row: r, count: rows[r].urls.length };
-    for (let c = 0; c < rows[r].urls.length; c++) {
-      const frame = await fetchPng(rows[r].urls[c]);
-      if (frame.width !== size || frame.height !== size) {
+    meta.rows[rows[r].name] = { row: r, count: rows[r].paths.length };
+    for (let c = 0; c < rows[r].paths.length; c++) {
+      const data = files[rows[r].paths[c]];
+      if (!data) throw new Error(`${entry.id}: ${rows[r].paths[c]} ausente no zip`);
+      const frame = PNG.sync.read(Buffer.from(data));
+      if (frame.width > size || frame.height > size) {
         throw new Error(
-          `${entry.id}/${rows[r].name}[${c}]: frame ${frame.width}x${frame.height}, esperado ${size}`,
+          `${entry.id}/${rows[r].name}[${c}]: frame ${frame.width}x${frame.height} maior que o canvas ${size}`,
         );
       }
-      PNG.bitblt(frame, sheet, 0, 0, size, size, c * size, r * size);
+      const dx = Math.floor((size - frame.width) / 2);
+      const dy = Math.floor((size - frame.height) / 2);
+      PNG.bitblt(frame, sheet, 0, 0, frame.width, frame.height, c * size + dx, r * size + dy);
     }
   }
 
@@ -90,9 +113,10 @@ export async function composeCharacter(entry: CharacterEntry, force: boolean): P
 }
 
 /**
- * Recolor programático: re-matiza os pixels saturados (o pano/detalhes da
- * roupa) para o matiz de cada cor da paleta, preservando tons neutros
- * (pele, couro, metal — baixa saturação).
+ * Recolor programático: re-matiza APENAS o pano teal do uniforme (matiz
+ * 140–230°) para a cor de cada jogador — pele, couro e metal ficam como
+ * estão. O sprite base foi gerado com faixa teal exatamente para servir
+ * de máscara de cor.
  */
 function recolorSheet(entry: CharacterEntry, base: PNG, sheetPath: string): void {
   for (let variant = 0; variant < PLAYER_HUES.length; variant++) {
@@ -100,9 +124,10 @@ function recolorSheet(entry: CharacterEntry, base: PNG, sheetPath: string): void
     base.data.copy(out.data);
     for (let i = 0; i < out.data.length; i += 4) {
       if (out.data[i + 3] === 0) continue;
-      const [, s, l] = rgbToHsl(out.data[i], out.data[i + 1], out.data[i + 2]);
-      if (s < 0.25 || l < 0.12 || l > 0.92) continue; // neutros ficam
-      const [r, g, b] = hslToRgb(PLAYER_HUES[variant], Math.max(s, 0.45), l);
+      const [h, s, l] = rgbToHsl(out.data[i], out.data[i + 1], out.data[i + 2]);
+      if (s < 0.2 || l < 0.1 || l > 0.95) continue; // neutros ficam
+      if (h < 140 || h > 230) continue; // só o pano teal muda
+      const [r, g, b] = hslToRgb(PLAYER_HUES[variant], Math.max(s, 0.55), l);
       out.data[i] = r;
       out.data[i + 1] = g;
       out.data[i + 2] = b;

@@ -29,6 +29,7 @@
     "concurrently": "^10.0.3",
     "eslint": "^10.6.0",
     "eslint-config-prettier": "^10.1.8",
+    "fflate": "^0.8.3",
     "pngjs": "^7.0.0",
     "prettier": "^3.9.4",
     "tsx": "^4.23.0",

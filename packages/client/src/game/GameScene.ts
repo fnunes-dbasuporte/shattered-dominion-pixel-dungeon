@@ -14,6 +14,13 @@ import {
 import type { GameConnection } from "../net/connection.js";
 import { InventoryPanel } from "../ui/inventory.js";
 import { ChatBox } from "../ui/chat.js";
+import {
+  createCharacterAnims,
+  facingFromDelta,
+  playAnim,
+  preloadCharacters,
+  type Facing,
+} from "./sprites.js";
 
 const ITEM_GLYPHS: Record<string, { char: string; color: string }> = {
   weapon: { char: "†", color: "#cfd2d8" },
@@ -41,21 +48,16 @@ const TILE_TEXTURES: Record<number, string[]> = {
 /** Tint multiplicativo do fog: descoberto mas fora de visão. */
 const FOG_TINT = 0x555566;
 
-const CORES_MOB: Record<string, number> = {
-  rat: 0x8a7a66,
-  gnoll: 0x9aa14e,
-  crab: 0xc4573b,
-};
-
 /** Centro do tile em pixels de mundo. */
 export const tileToWorld = (tile: number) => tile * TILE_PX + TILE_PX / 2;
 
 interface ActorSprite {
   container: Phaser.GameObjects.Container;
-  rect: Phaser.GameObjects.Rectangle;
+  sprite: Phaser.GameObjects.Sprite;
   hpBar: Phaser.GameObjects.Graphics;
   kind: ActorKind;
-  color: number;
+  texture: string;
+  facing: Facing;
   x: number;
   y: number;
 }
@@ -117,6 +119,7 @@ export class GameScene extends Phaser.Scene {
         this.load.image(name, `assets/tiles/${name.replace("tile-", "")}.png`);
       }
     }
+    preloadCharacters(this);
   }
 
   init(data: GameSceneData): void {
@@ -125,6 +128,7 @@ export class GameScene extends Phaser.Scene {
   }
 
   create(): void {
+    createCharacterAnims(this);
     const w = this.grid.width * TILE_PX;
     const h = this.grid.height * TILE_PX;
     this.cameras.main.setBounds(0, 0, w, h);
@@ -376,11 +380,13 @@ export class GameScene extends Phaser.Scene {
           const paraMim = e.targetId === this.conn.sessionId;
           this.floatingText(e.x, e.y, `-${e.damage}`, paraMim ? "#e8554d" : "#e8c04d");
           this.flashActor(e.targetId);
+          this.playAttackAnim(e.attackerId, e.x, e.y);
           this.pushLog(`${e.attackerName} acertou ${e.targetName} (${e.damage})`);
           break;
         }
         case "miss":
           this.floatingText(e.x, e.y, "errou", "#9a96ad");
+          this.playAttackAnim(e.attackerId, e.x, e.y);
           this.pushLog(`${e.attackerName} errou ${e.targetName}`);
           break;
         case "death":
@@ -402,6 +408,16 @@ export class GameScene extends Phaser.Scene {
       }
     }
     return dying;
+  }
+
+  /** Vira o atacante para o alvo e toca o golpe uma vez. */
+  private playAttackAnim(attackerId: string, targetX: number, targetY: number): void {
+    const atk = this.atores.get(attackerId);
+    if (!atk) return;
+    atk.facing = facingFromDelta(targetX - atk.x, targetY - atk.y, atk.facing);
+    playAnim(atk.sprite, atk.texture, "attack", atk.facing, () => {
+      if (atk.container.active) playAnim(atk.sprite, atk.texture, "idle", atk.facing);
+    });
   }
 
   private floatingText(tileX: number, tileY: number, texto: string, cor: string): void {
@@ -426,11 +442,14 @@ export class GameScene extends Phaser.Scene {
   }
 
   private flashActor(id: string): void {
-    const sprite = this.atores.get(id);
-    if (!sprite) return;
-    sprite.rect.setFillStyle(0xffffff);
+    const actor = this.atores.get(id);
+    if (!actor) return;
+    actor.sprite.setTint(0xffffff).setTintMode(Phaser.TintModes.FILL);
     this.time.delayedCall(90, () => {
-      if (sprite.container.active) sprite.rect.setFillStyle(sprite.color);
+      if (actor.container.active) {
+        actor.sprite.clearTint();
+        actor.sprite.setTintMode(Phaser.TintModes.MULTIPLY);
+      }
     });
   }
 
@@ -448,11 +467,14 @@ export class GameScene extends Phaser.Scene {
     for (const [id, sprite] of this.atores) {
       if (!present.has(id)) {
         if (dyingIds.has(id)) {
-          // morte: fade antes de sumir
+          // morte: herói toca a animação; todos desvanecem
+          if (sprite.kind === "player")
+            playAnim(sprite.sprite, sprite.texture, "death", sprite.facing);
           this.tweens.add({
             targets: sprite.container,
             alpha: 0,
-            duration: 350,
+            duration: sprite.kind === "player" ? 700 : 350,
+            delay: sprite.kind === "player" ? 300 : 0,
             onComplete: () => sprite.container.destroy(),
           });
         } else {
@@ -470,14 +492,20 @@ export class GameScene extends Phaser.Scene {
         this.atores.set(actor.id, sprite);
         appeared.push(actor.id);
       } else if (sprite.x !== actor.x || sprite.y !== actor.y) {
-        sprite.x = actor.x;
-        sprite.y = actor.y;
+        const alvo = sprite; // captura para os callbacks do tween
+        alvo.facing = facingFromDelta(actor.x - alvo.x, actor.y - alvo.y, alvo.facing);
+        alvo.x = actor.x;
+        alvo.y = actor.y;
+        playAnim(alvo.sprite, alvo.texture, "walk", alvo.facing);
         this.tweens.add({
-          targets: sprite.container,
+          targets: alvo.container,
           x: tileToWorld(actor.x),
           y: tileToWorld(actor.y),
           duration: actor.moveTicks * 100,
           ease: "Linear",
+          onComplete: () => {
+            if (alvo.container.active) playAnim(alvo.sprite, alvo.texture, "idle", alvo.facing);
+          },
         });
       }
       this.drawMiniHpBar(sprite, actor);
@@ -488,32 +516,50 @@ export class GameScene extends Phaser.Scene {
   private createActorSprite(actor: VisibleActor): ActorSprite {
     const souEu = actor.id === this.conn.sessionId;
     const ehMob = actor.kind !== "player";
-    const cor = ehMob
-      ? (CORES_MOB[actor.kind] ?? 0xffffff)
-      : PLAYER_COLORS[actor.colorIndex % PLAYER_COLORS.length];
+    const texture =
+      actor.kind === "player" ? `hero-${actor.colorIndex % PLAYER_COLORS.length}` : actor.kind;
 
-    const tamanho = ehMob ? TILE_PX - 12 : TILE_PX - 8;
-    const rect = this.add.rectangle(0, 0, tamanho, tamanho, cor);
-    if (souEu) rect.setStrokeStyle(2, 0xffffff);
+    const partes: Phaser.GameObjects.GameObject[] = [];
+    if (souEu) {
+      // anel sob os pés marca o próprio herói
+      partes.push(this.add.ellipse(0, 7, 14, 6).setStrokeStyle(1, 0xffffff, 0.85));
+    }
+
+    const sprite = this.add.sprite(0, 0, texture);
+    partes.push(sprite);
 
     const label = this.add
-      .text(0, -TILE_PX + 6, actor.asleep ? `${actor.name} 💤` : actor.name, {
+      .text(0, -14, actor.asleep ? `${actor.name} 💤` : actor.name, {
         fontFamily: "monospace",
-        fontSize: "9px",
+        fontSize: "8px",
         color: souEu ? "#ffffff" : ehMob ? "#c98a7a" : "#c9c5da",
       })
-      .setOrigin(0.5, 0);
+      .setOrigin(0.5, 1);
+    partes.push(label);
 
     const hpBar = this.add.graphics();
+    partes.push(hpBar);
 
     const container = this.add
-      .container(tileToWorld(actor.x), tileToWorld(actor.y), [rect, label, hpBar])
+      .container(tileToWorld(actor.x), tileToWorld(actor.y), partes)
       .setDepth(10);
+
+    const actorSprite: ActorSprite = {
+      container,
+      sprite,
+      hpBar,
+      kind: actor.kind,
+      texture,
+      facing: "south",
+      x: actor.x,
+      y: actor.y,
+    };
+    playAnim(sprite, texture, "idle", "south");
 
     if (souEu) {
       this.cameras.main.startFollow(container, true, 0.12, 0.12);
     }
-    return { container, rect, hpBar, kind: actor.kind, color: cor, x: actor.x, y: actor.y };
+    return actorSprite;
   }
 
   /** Mini-barra sobre atores feridos (some quando o HP está cheio). */
@@ -521,12 +567,12 @@ export class GameScene extends Phaser.Scene {
     const g = sprite.hpBar;
     g.clear();
     if (actor.hp >= actor.maxHp) return;
-    const w = 20;
+    const w = 16;
     const frac = actor.hp / actor.maxHp;
     g.fillStyle(0x0b0a10, 0.8);
-    g.fillRect(-w / 2, -TILE_PX / 2 - 4, w, 3);
+    g.fillRect(-w / 2, -13, w, 2);
     g.fillStyle(frac > 0.5 ? 0x5fce6b : frac > 0.25 ? 0xe8c04d : 0xe8554d);
-    g.fillRect(-w / 2, -TILE_PX / 2 - 4, w * frac, 3);
+    g.fillRect(-w / 2, -13, w * frac, 2);
   }
 
   // ── HUD ──────────────────────────────────────────────────────────────

@@ -57,5 +57,21 @@
       ]
     }
   ],
-  "characters": []
+  "characters": [
+    {
+      "id": "hero",
+      "pixellabId": "25619a3a-3301-4739-9f8c-a78bbe19bf9e",
+      "prompt": "grizzled human warrior gripping a short sword, dark worn leather armor with teal cloth sash, small round shield on back, gritty sewer dungeon crawler",
+      "canvas": 24,
+      "out": "sprites/hero.png",
+      "zip": "https://api.pixellab.ai/mcp/characters/25619a3a-3301-4739-9f8c-a78bbe19bf9e/download",
+      "animMap": {
+        "animating-ae09fe97": "walk",
+        "animating": "idle",
+        "cross_punch_attack": "attack",
+        "falling_backward": "death"
+      },
+      "recolor": true
+    }
+  ]
 }
