@@ -5,7 +5,7 @@ import type { Rng } from "./rng.js";
  * deste projeto, inspirados apenas no arquétipo clássico de roguelike.
  */
 
-export type MobKind = "rat" | "gnoll" | "crab";
+export type MobKind = "rat" | "gnoll" | "crab" | "sludge" | "boss";
 
 export interface MobDef {
   kind: MobKind;
@@ -61,8 +61,34 @@ export const MOB_DEFS: Record<MobKind, MobDef> = {
     xpReward: 5,
     spawnWeight: 2,
   },
+
+  sludge: {
+    kind: "sludge",
+    name: "Lodo Rastejante",
+    maxHp: 4,
+    accuracy: 6,
+    evasion: 2,
+    damageMin: 1,
+    damageMax: 2,
+    speed: 1,
+    xpReward: 1,
+    spawnWeight: 0, // só nasce pelo boss
+  },
+  boss: {
+    kind: "boss",
+    name: "Amálgama de Lodo",
+    maxHp: 80, // base; +40 por jogador extra no spawn
+    accuracy: 12,
+    evasion: 2,
+    damageMin: 3,
+    damageMax: 8,
+    speed: 1,
+    xpReward: 50,
+    spawnWeight: 0, // só no covil
+  },
 };
 
+/** Espécies que aparecem em spawns aleatórios (boss e minion ficam de fora). */
 export const ALL_MOB_KINDS: readonly MobKind[] = ["rat", "gnoll", "crab"];
 
 /** Raio de visão dos mobs (menor que o do herói, 8). */
