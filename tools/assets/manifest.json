@@ -152,13 +152,13 @@
   "characters": [
     {
       "id": "hero",
-      "pixellabId": "25619a3a-3301-4739-9f8c-a78bbe19bf9e",
-      "prompt": "grizzled human warrior gripping a short sword, dark worn leather armor with teal cloth sash, small round shield on back, gritty sewer dungeon crawler",
+      "pixellabId": "ed837fa5-5cbe-46bb-97eb-8ca7337c8697",
+      "prompt": "grizzled bald warrior with big head, dark worn leather armor with teal cloth sash, short sword, tiny stubby body, dungeon crawler (proportions preset chibi — estilo cabeça grande do roguelike clássico)",
       "canvas": 24,
       "out": "sprites/hero.png",
-      "zip": "https://api.pixellab.ai/mcp/characters/25619a3a-3301-4739-9f8c-a78bbe19bf9e/download",
+      "zip": "https://api.pixellab.ai/mcp/characters/ed837fa5-5cbe-46bb-97eb-8ca7337c8697/download",
       "animMap": {
-        "animating-ae09fe97": "walk",
+        "animating-e4e69cb4": "walk",
         "animating": "idle",
         "cross_punch_attack": "attack",
         "falling_backward": "death"
