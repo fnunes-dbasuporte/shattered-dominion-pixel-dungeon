@@ -699,6 +699,11 @@ export class GameScene extends Phaser.Scene {
 
   private updateTopBar(visiveis: number): void {
     const total = (this.conn.room.state as { players?: { size?: number } }).players?.size ?? "?";
-    this.topText.setText(`sala ${this.conn.roomCode} · ${total} no grupo · ${visiveis} à vista`);
+    const ping = this.conn.pingMs >= 0 ? ` · ping ${this.conn.pingMs}ms` : "";
+    const votos = this.descent ? ` · descer ${this.descent.votes}/${this.descent.needed} (G)` : "";
+    this.topText.setText(
+      `andar ${this.currentDepth} · sala ${this.conn.roomCode} · ${total} no grupo · ` +
+        `${visiveis} à vista${ping}${votos}`,
+    );
   }
 }
