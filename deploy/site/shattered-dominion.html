@@ -1,0 +1,293 @@
+<!doctype html>
+<!--
+  Página de apresentação do jogo para a vitrine (pixelforgegames.com.br).
+
+  Instalação: scp deploy/site/shattered-dominion.html lightsail:/tmp/
+              ssh lightsail 'sudo cp /tmp/shattered-dominion.html /usr/share/nginx/html/'
+  URL:        https://www.pixelforgegames.com.br/shattered-dominion.html
+
+  Auto-contida (CSS inline). As artes vêm do próprio jogo deployado em
+  /shattered-dominion/assets/ — recortes de spritesheet via CSS.
+  TODO(Felipe): colar 2 screenshots reais do gameplay nos <figure> marcados.
+-->
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Shattered Dominion Pixel Dungeon — roguelike multiplayer</title>
+    <meta
+      name="description"
+      content="Roguelike multiplayer de masmorra para até 8 jogadores, direto no navegador. Grátis e open source (GPL-3.0)."
+    />
+    <style>
+      :root {
+        --bg: #0b0a10;
+        --panel: #17141f;
+        --border: #2c2740;
+        --text: #e8e6f0;
+        --muted: #9a96ad;
+        --gold: #e8c04d;
+        --green: #5fce6b;
+        --blue: #4da3e8;
+        --red: #e8554d;
+      }
+      * {
+        box-sizing: border-box;
+        margin: 0;
+      }
+      body {
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Courier New", monospace;
+        line-height: 1.55;
+      }
+      .wrap {
+        max-width: 880px;
+        margin: 0 auto;
+        padding: 32px 20px 64px;
+      }
+      header {
+        text-align: center;
+        padding: 28px 0 8px;
+      }
+      h1 {
+        font-size: clamp(22px, 4.5vw, 38px);
+        letter-spacing: 3px;
+        color: var(--gold);
+        text-shadow: 0 0 18px rgba(232, 192, 77, 0.35);
+      }
+      .tagline {
+        color: var(--muted);
+        margin-top: 8px;
+      }
+      .cast {
+        display: flex;
+        justify-content: center;
+        align-items: flex-end;
+        gap: 18px;
+        margin: 26px 0 10px;
+        image-rendering: pixelated;
+      }
+      /* recortes das spritesheets do jogo (frame parado sul = posição 0,0) */
+      .sprite {
+        background-repeat: no-repeat;
+        transform-origin: bottom center;
+      }
+      .sprite.hero {
+        width: 56px;
+        height: 56px;
+        background-image: url("/shattered-dominion/assets/sprites/hero-1.png");
+        transform: scale(2);
+      }
+      .sprite.boss {
+        width: 64px;
+        height: 64px;
+        background-image: url("/shattered-dominion/assets/sprites/boss.png");
+        transform: scale(2.4);
+        margin: 0 26px;
+      }
+      .sprite.rat {
+        width: 56px;
+        height: 56px;
+        background-image: url("/shattered-dominion/assets/sprites/rat.png");
+        transform: scale(1.6);
+      }
+      .cta {
+        display: block;
+        width: fit-content;
+        margin: 30px auto 6px;
+        background: var(--green);
+        color: var(--bg);
+        font-weight: bold;
+        font-size: 18px;
+        letter-spacing: 2px;
+        text-decoration: none;
+        padding: 14px 34px;
+        border-radius: 6px;
+        border-bottom: 4px solid #3f9c49;
+      }
+      .cta:hover {
+        filter: brightness(1.1);
+      }
+      .cta-sub {
+        text-align: center;
+        color: var(--muted);
+        font-size: 13px;
+        margin-bottom: 28px;
+      }
+      section {
+        background: var(--panel);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 22px 24px;
+        margin: 18px 0;
+      }
+      h2 {
+        color: var(--blue);
+        font-size: 17px;
+        letter-spacing: 1px;
+        margin-bottom: 12px;
+      }
+      ul {
+        padding-left: 20px;
+      }
+      li {
+        margin: 6px 0;
+      }
+      em {
+        color: var(--gold);
+        font-style: normal;
+      }
+      .shots {
+        display: grid;
+        grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+        gap: 14px;
+      }
+      .shots figure {
+        border: 1px solid var(--border);
+        border-radius: 8px;
+        overflow: hidden;
+        background: #000;
+      }
+      .shots img {
+        display: block;
+        width: 100%;
+        image-rendering: pixelated;
+      }
+      .shots figcaption {
+        color: var(--muted);
+        font-size: 12px;
+        padding: 8px 10px;
+      }
+      table {
+        width: 100%;
+        border-collapse: collapse;
+        font-size: 14px;
+      }
+      td {
+        padding: 6px 8px;
+        border-bottom: 1px solid var(--border);
+      }
+      td:first-child {
+        color: var(--gold);
+        white-space: nowrap;
+        width: 130px;
+      }
+      footer {
+        text-align: center;
+        color: var(--muted);
+        font-size: 13px;
+        margin-top: 34px;
+      }
+      footer a {
+        color: var(--blue);
+      }
+    </style>
+  </head>
+  <body>
+    <div class="wrap">
+      <header>
+        <h1>SHATTERED DOMINION<br />PIXEL DUNGEON</h1>
+        <p class="tagline">
+          Roguelike de masmorra <em>multiplayer</em> — até 8 jogadores, direto no navegador.
+        </p>
+        <div class="cast" aria-hidden="true">
+          <div class="sprite hero"></div>
+          <div class="sprite boss"></div>
+          <div class="sprite rat"></div>
+        </div>
+      </header>
+
+      <a class="cta" href="/shattered-dominion/">▶ JOGAR AGORA</a>
+      <p class="cta-sub">grátis · sem cadastro · roda no navegador</p>
+
+      <section>
+        <h2>O QUE É</h2>
+        <p>
+          Desçam juntos pelos esgotos de uma fortaleza em ruínas: 5 andares gerados proceduralmente,
+          mobs cada vez mais cruéis e, no fundo, o
+          <em>Amálgama de Lodo</em> guardando o Amuleto do Domínio. Inspirado nas mecânicas dos
+          roguelikes clássicos de masmorra — morte permanente na run, identificação de poções por
+          tentativa e erro, e a coragem (ou ganância) de decidir quando descer.
+        </p>
+      </section>
+
+      <section>
+        <h2>SCREENSHOTS</h2>
+        <div class="shots">
+          <!-- TODO(Felipe): substituir os placeholders por screenshots reais -->
+          <figure>
+            <img src="/shattered-dominion/assets/tiles/floor-1.png" alt="Screenshot do gameplay" />
+            <figcaption>Exploração com fog of war (screenshot em breve)</figcaption>
+          </figure>
+          <figure>
+            <img
+              src="/shattered-dominion/assets/tiles/water.png"
+              alt="Screenshot da luta do boss"
+            />
+            <figcaption>A luta contra o Amálgama de Lodo (screenshot em breve)</figcaption>
+          </figure>
+        </div>
+      </section>
+
+      <section>
+        <h2>COMO JOGAR</h2>
+        <ul>
+          <li>Um jogador <em>cria a sala</em> e compartilha o código de 4 letras.</li>
+          <li>Até 8 aventureiros entram com o código — dá para entrar no meio da run.</li>
+          <li>Explorem, lutem e dividam o loot; a <em>descida é votada</em> em grupo.</li>
+          <li>Morreu? Vira espectador — e revive quando o grupo desce de andar.</li>
+          <li>Vitória: derrotar o boss do andar 5 e erguer o <em>Amuleto do Domínio</em>.</li>
+        </ul>
+        <br />
+        <table>
+          <tr>
+            <td>WASD / setas</td>
+            <td>mover e atacar (andar contra o inimigo)</td>
+          </tr>
+          <tr>
+            <td>G</td>
+            <td>escadas: subir · votar descida</td>
+          </tr>
+          <tr>
+            <td>I</td>
+            <td>inventário (equipar, beber, ler, comer, largar)</td>
+          </tr>
+          <tr>
+            <td>Enter</td>
+            <td>chat com balões</td>
+          </tr>
+          <tr>
+            <td>Clique</td>
+            <td>caminhar até o tile</td>
+          </tr>
+        </table>
+      </section>
+
+      <section>
+        <h2>FICHA TÉCNICA</h2>
+        <ul>
+          <li>Servidor autoritativo (10 ticks/s) — o cliente nunca decide regra de jogo.</li>
+          <li>Mapas 100% procedurais e determinísticos por seed.</li>
+          <li>Pixel art própria, gerada para o projeto (nada copiado de outros jogos).</li>
+          <li>Reconexão automática: caiu, volta em até 60s no mesmo herói.</li>
+        </ul>
+      </section>
+
+      <footer>
+        <p>
+          Código aberto sob
+          <a href="https://www.gnu.org/licenses/gpl-3.0.html" rel="license">GPL-3.0-or-later</a>
+          ·
+          <a href="https://github.com/fnunes-dbasuporte/shattered-dominion-pixel-dungeon"
+            >GitHub — código-fonte</a
+          >
+        </p>
+        <p>
+          Clone de <strong>mecânicas</strong> inspirado no gênero consagrado por Pixel Dungeon
+          (watabou) — sem código, nomes ou assets do original.
+        </p>
+      </footer>
+    </div>
+  </body>
+</html>
