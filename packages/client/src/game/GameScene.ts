@@ -3,6 +3,7 @@ import {
   Grid,
   PLAYER_COLORS,
   TileType,
+  hashSeed,
   type ActorKind,
   type GameEvent,
   type MatchStartedMessage,
@@ -23,26 +24,22 @@ const ITEM_GLYPHS: Record<string, { char: string; color: string }> = {
   gold: { char: "$", color: "#ffd700" },
 };
 
-export const TILE_PX = 24;
+export const TILE_PX = 16;
 
-const TILE_COLORS: Record<number, number> = {
-  [TileType.Wall]: 0x2e2842,
-  [TileType.Floor]: 0x5c5570,
-  [TileType.Door]: 0xc9a227,
-  [TileType.StairsUp]: 0x4da3e8,
-  [TileType.StairsDown]: 0xe8554d,
-  [TileType.Water]: 0x3a6ea5,
-  [TileType.Grass]: 0x4e9a51,
-  [TileType.Embers]: 0xb3542e,
+/** Texturas por TileType (chão tem 3 variações escolhidas por hash do índice). */
+const TILE_TEXTURES: Record<number, string[]> = {
+  [TileType.Wall]: ["tile-wall"],
+  [TileType.Floor]: ["tile-floor-1", "tile-floor-2", "tile-floor-3"],
+  [TileType.Door]: ["tile-door"],
+  [TileType.StairsUp]: ["tile-stairs-up"],
+  [TileType.StairsDown]: ["tile-stairs-down"],
+  [TileType.Water]: ["tile-water"],
+  [TileType.Grass]: ["tile-grass"],
+  [TileType.Embers]: ["tile-embers"],
 };
 
-/** Cor escurecida para tiles descobertos mas fora de visão (fog of war). */
-function dimColor(color: number, factor = 0.38): number {
-  const r = Math.floor(((color >> 16) & 0xff) * factor);
-  const g = Math.floor(((color >> 8) & 0xff) * factor);
-  const b = Math.floor((color & 0xff) * factor);
-  return (r << 16) | (g << 8) | b;
-}
+/** Tint multiplicativo do fog: descoberto mas fora de visão. */
+const FOG_TINT = 0x555566;
 
 const CORES_MOB: Record<string, number> = {
   rat: 0x8a7a66,
@@ -91,7 +88,7 @@ export class GameScene extends Phaser.Scene {
     inventory: [],
   };
 
-  private mapGfx!: Phaser.GameObjects.Graphics;
+  private tileSprites = new Map<number, Phaser.GameObjects.Image>();
   private hudGfx!: Phaser.GameObjects.Graphics;
   private hudText!: Phaser.GameObjects.Text;
   private topText!: Phaser.GameObjects.Text;
@@ -114,6 +111,14 @@ export class GameScene extends Phaser.Scene {
     super("Game");
   }
 
+  preload(): void {
+    for (const names of Object.values(TILE_TEXTURES)) {
+      for (const name of names) {
+        this.load.image(name, `assets/tiles/${name.replace("tile-", "")}.png`);
+      }
+    }
+  }
+
   init(data: GameSceneData): void {
     this.conn = data.conn;
     this.grid = new Grid(data.started.width, data.started.height);
@@ -123,10 +128,8 @@ export class GameScene extends Phaser.Scene {
     const w = this.grid.width * TILE_PX;
     const h = this.grid.height * TILE_PX;
     this.cameras.main.setBounds(0, 0, w, h);
-    this.cameras.main.setZoom(2);
+    this.cameras.main.setZoom(3);
     this.cameras.main.setBackgroundColor("#0b0a10");
-
-    this.mapGfx = this.add.graphics();
 
     this.topText = this.add
       .text(8, 8, "", { fontFamily: "monospace", fontSize: "12px", color: "#9a96ad" })
@@ -339,20 +342,26 @@ export class GameScene extends Phaser.Scene {
 
   /**
    * Fog of war em 3 estados: não descoberto = nada (fundo escuro);
-   * descoberto fora de visão = cor escurecida; visível = cor plena.
+   * descoberto fora de visão = tile com tint escuro; visível = tile pleno.
    */
   private redrawMap(): void {
-    const g = this.mapGfx;
-    g.clear();
     for (const i of this.discovered) {
-      const base = TILE_COLORS[this.grid.tiles[i]] ?? 0xff00ff;
-      g.fillStyle(this.visibleNow.has(i) ? base : dimColor(base));
-      g.fillRect(
-        (i % this.grid.width) * TILE_PX,
-        Math.floor(i / this.grid.width) * TILE_PX,
-        TILE_PX,
-        TILE_PX,
-      );
+      let sprite = this.tileSprites.get(i);
+      if (!sprite) {
+        const tile = this.grid.tiles[i];
+        const names = TILE_TEXTURES[tile] ?? TILE_TEXTURES[TileType.Floor];
+        const texture = names[hashSeed(`tile:${i}`) % names.length];
+        sprite = this.add
+          .image(
+            tileToWorld(i % this.grid.width),
+            tileToWorld(Math.floor(i / this.grid.width)),
+            texture,
+          )
+          .setDepth(0);
+        this.tileSprites.set(i, sprite);
+      }
+      if (this.visibleNow.has(i)) sprite.clearTint();
+      else sprite.setTint(FOG_TINT);
     }
   }
 
