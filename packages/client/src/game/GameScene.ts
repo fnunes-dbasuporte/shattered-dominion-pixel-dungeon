@@ -22,14 +22,24 @@ import {
   type Facing,
 } from "./sprites.js";
 
-const ITEM_GLYPHS: Record<string, { char: string; color: string }> = {
-  weapon: { char: "†", color: "#cfd2d8" },
-  armor: { char: "▣", color: "#8f9bb3" },
-  potion: { char: "!", color: "#b35de8" },
-  scroll: { char: "?", color: "#e8c04d" },
-  food: { char: "%", color: "#b3854d" },
-  gold: { char: "$", color: "#ffd700" },
-};
+/** Ícones de item gerados (assets/items/<slug>.png, 32px). */
+export const ITEM_ICONS = [
+  "dagger",
+  "shortsword",
+  "mace",
+  "leather",
+  "chainmail",
+  "potion-vermelha",
+  "potion-azul",
+  "potion-esverdeada",
+  "potion-turva",
+  "potion-ambar",
+  "potion-violeta",
+  "scroll",
+  "ration",
+  "gold",
+  "ankh",
+];
 
 export const TILE_PX = 16;
 
@@ -98,7 +108,7 @@ export class GameScene extends Phaser.Scene {
   private logText!: Phaser.GameObjects.Text;
   private logLines: string[] = [];
   private atores = new Map<string, ActorSprite>();
-  private itensChao = new Map<string, Phaser.GameObjects.Text>();
+  private itensChao = new Map<string, Phaser.GameObjects.Image>();
   private invPanel!: InventoryPanel;
   private chat!: ChatBox;
   private balloons = new Map<string, Phaser.GameObjects.Text>();
@@ -120,6 +130,12 @@ export class GameScene extends Phaser.Scene {
       }
     }
     preloadCharacters(this);
+    for (const slug of ITEM_ICONS) {
+      this.load.image(`item-${slug}`, `assets/items/${slug}.png`);
+    }
+    for (const fx of ["slash", "poof", "sparkle"]) {
+      this.load.image(`fx-${fx}`, `assets/fx/${fx}.png`);
+    }
   }
 
   init(data: GameSceneData): void {
@@ -319,7 +335,7 @@ export class GameScene extends Phaser.Scene {
     this.onVisionExtra(v, newActorIds);
   }
 
-  /** Glifos coloridos por categoria para itens/ouro no chão. */
+  /** Ícones dos itens/ouro no chão (imagens 32px exibidas em 12px de mundo). */
   private syncFloorItems(v: VisionMessage): void {
     const present = new Set(v.items.map((i) => i.id));
     for (const [id, sprite] of this.itensChao) {
@@ -330,17 +346,12 @@ export class GameScene extends Phaser.Scene {
     }
     for (const item of v.items) {
       if (this.itensChao.has(item.id)) continue;
-      const glyph = ITEM_GLYPHS[item.category] ?? { char: "•", color: "#ffffff" };
-      const t = this.add
-        .text(tileToWorld(item.x), tileToWorld(item.y), glyph.char, {
-          fontFamily: "monospace",
-          fontSize: "14px",
-          color: glyph.color,
-          fontStyle: "bold",
-        })
-        .setOrigin(0.5)
+      const texture = this.textures.exists(`item-${item.icon}`) ? `item-${item.icon}` : "item-gold";
+      const img = this.add
+        .image(tileToWorld(item.x), tileToWorld(item.y), texture)
+        .setDisplaySize(12, 12)
         .setDepth(6);
-      this.itensChao.set(item.id, t);
+      this.itensChao.set(item.id, img);
     }
   }
 
@@ -381,6 +392,7 @@ export class GameScene extends Phaser.Scene {
           this.floatingText(e.x, e.y, `-${e.damage}`, paraMim ? "#e8554d" : "#e8c04d");
           this.flashActor(e.targetId);
           this.playAttackAnim(e.attackerId, e.x, e.y);
+          this.spawnSlash(e.attackerId, e.x, e.y);
           this.pushLog(`${e.attackerName} acertou ${e.targetName} (${e.damage})`);
           break;
         }
@@ -391,11 +403,13 @@ export class GameScene extends Phaser.Scene {
           break;
         case "death":
           dying.add(e.actorId);
-          this.floatingText(e.x, e.y, "✝", "#e8554d");
+          if (!e.actorId.startsWith("mob-")) this.floatingText(e.x, e.y, "✝", "#e8554d");
+          this.spawnEffect("fx-poof", e.x, e.y, { from: 5, to: 16, duration: 380 });
           this.pushLog(e.actorId === this.conn.sessionId ? "VOCÊ morreu!" : `${e.name} morreu`);
           break;
         case "levelup":
           this.floatingText(e.x, e.y, `Nível ${e.level}!`, "#5fce6b");
+          this.spawnEffect("fx-sparkle", e.x, e.y, { from: 8, to: 20, duration: 550, rise: 6 });
           this.pushLog(`${e.name} subiu para o nível ${e.level}`);
           break;
         case "revive":
@@ -408,6 +422,49 @@ export class GameScene extends Phaser.Scene {
       }
     }
     return dying;
+  }
+
+  /** Arco de slash sobre o alvo, rotacionado na direção do golpe. */
+  private spawnSlash(attackerId: string, targetX: number, targetY: number): void {
+    const atk = this.atores.get(attackerId);
+    const angle = atk ? Math.atan2(targetY - atk.y, targetX - atk.x) : 0;
+    const img = this.add
+      .image(tileToWorld(targetX), tileToWorld(targetY), "fx-slash")
+      .setDisplaySize(13, 13)
+      .setRotation(angle)
+      .setAlpha(0.95)
+      .setDepth(30);
+    this.tweens.add({
+      targets: img,
+      alpha: 0,
+      scale: img.scale * 1.4,
+      duration: 200,
+      ease: "Cubic.easeOut",
+      onComplete: () => img.destroy(),
+    });
+  }
+
+  /** Efeito genérico: cresce e desvanece no tile. */
+  private spawnEffect(
+    texture: string,
+    tileX: number,
+    tileY: number,
+    opts: { from: number; to: number; duration: number; rise?: number },
+  ): void {
+    const img = this.add
+      .image(tileToWorld(tileX), tileToWorld(tileY), texture)
+      .setDisplaySize(opts.from, opts.from)
+      .setDepth(30);
+    this.tweens.add({
+      targets: img,
+      displayWidth: opts.to,
+      displayHeight: opts.to,
+      y: img.y - (opts.rise ?? 0),
+      alpha: 0,
+      duration: opts.duration,
+      ease: "Cubic.easeOut",
+      onComplete: () => img.destroy(),
+    });
   }
 
   /** Vira o atacante para o alvo e toca o golpe uma vez. */
