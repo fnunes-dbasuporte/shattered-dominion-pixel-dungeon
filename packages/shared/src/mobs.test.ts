@@ -6,7 +6,9 @@ import {
   MOB_COUNT_MIN,
   MOB_DEFS,
   rollMobCount,
+  rollMobCountForDepth,
   rollMobKind,
+  scaledMobStats,
 } from "./mobs.js";
 
 describe("MOB_DEFS", () => {
@@ -44,6 +46,50 @@ describe("rollMobCount", () => {
     }
     expect(seen.has(MOB_COUNT_MIN)).toBe(true);
     expect(seen.has(MOB_COUNT_MAX)).toBe(true);
+  });
+});
+
+describe("scaledMobStats", () => {
+  it("andar 1 = stats base; andares fundos são mais fortes em tudo", () => {
+    for (const kind of ALL_MOB_KINDS) {
+      const base = scaledMobStats(kind, 1);
+      const def = MOB_DEFS[kind];
+      expect(base.maxHp).toBe(def.maxHp);
+      expect(base.damageMax).toBe(def.damageMax);
+      expect(base.xpReward).toBe(def.xpReward);
+
+      const fundo = scaledMobStats(kind, 4);
+      expect(fundo.maxHp).toBeGreaterThan(base.maxHp);
+      expect(fundo.accuracy).toBeGreaterThan(base.accuracy);
+      expect(fundo.damageMax).toBeGreaterThan(base.damageMax);
+      expect(fundo.xpReward).toBeGreaterThan(base.xpReward);
+    }
+  });
+
+  it("é monotônico entre andares 1→5", () => {
+    for (let d = 1; d < 5; d++) {
+      const a = scaledMobStats("rat", d);
+      const b = scaledMobStats("rat", d + 1);
+      expect(b.maxHp).toBeGreaterThanOrEqual(a.maxHp);
+      expect(b.damageMax).toBeGreaterThanOrEqual(a.damageMax);
+    }
+  });
+});
+
+describe("rollMobCountForDepth", () => {
+  it("andares fundos têm mais mobs, com teto no bônus", () => {
+    const conta = (depth: number) => {
+      const rng = new Rng(3);
+      let total = 0;
+      for (let i = 0; i < 500; i++) total += rollMobCountForDepth(rng, depth);
+      return total / 500;
+    };
+    expect(conta(4)).toBeGreaterThan(conta(1));
+    // bônus satura em +3
+    const rng = new Rng(1);
+    for (let i = 0; i < 500; i++) {
+      expect(rollMobCountForDepth(rng, 9)).toBeLessThanOrEqual(MOB_COUNT_MAX + 3);
+    }
   });
 });
 

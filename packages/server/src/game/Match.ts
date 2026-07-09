@@ -16,8 +16,9 @@ import {
   heroStats,
   mobThink,
   moveCostTicks,
-  rollMobCount,
+  rollMobCountForDepth,
   rollMobKind,
+  scaledMobStats,
   ARMORS,
   FOOD_HEAL,
   HEAL_POTION_AMOUNT,
@@ -318,15 +319,16 @@ export class Match {
     return this.actors.size - this.playerCount;
   }
 
-  /** Povoa o andar com 4–8 mobs em salas que não sejam a de entrada. */
+  /** Povoa o andar com mobs (mais numerosos em andares fundos). */
   populateMobs(): void {
-    this.mobCap = rollMobCount(this.rng);
+    this.mobCap = rollMobCountForDepth(this.rng, this.level.depth);
     for (let i = 0; i < this.mobCap; i++) this.trySpawnRandomMob();
   }
 
   /** Spawn direto — usado pelos testes e pelo respawn/população. */
   spawnMobAt(kind: MobKind, x: number, y: number): string {
     const def = MOB_DEFS[kind];
+    const stats = scaledMobStats(kind, this.level.depth);
     const id = `mob-${++this.mobSeq}`;
     const mob: MobActor = {
       kind,
@@ -336,12 +338,12 @@ export class Match {
       y,
       speed: def.speed,
       nextActionAt: 0,
-      hp: def.maxHp,
-      maxHp: def.maxHp,
-      accuracy: def.accuracy,
-      evasion: def.evasion,
-      damageMin: def.damageMin,
-      damageMax: def.damageMax,
+      hp: stats.maxHp,
+      maxHp: stats.maxHp,
+      accuracy: stats.accuracy,
+      evasion: stats.evasion,
+      damageMin: stats.damageMin,
+      damageMax: stats.damageMax,
       mind: freshMind(),
     };
     this.actors.set(id, mob);
@@ -827,7 +829,9 @@ export class Match {
     }
 
     this.actors.delete(victim.id);
-    if (isPlayer(killer)) this.awardXp(killer, MOB_DEFS[victim.kind].xpReward);
+    if (isPlayer(killer)) {
+      this.awardXp(killer, scaledMobStats(victim.kind as MobKind, this.level.depth).xpReward);
+    }
 
     // drop da espécie no tile onde caiu
     const drop = rollMobDrop(this.rng, victim.kind as MobKind);

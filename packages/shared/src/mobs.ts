@@ -80,6 +80,39 @@ export function rollMobCount(rng: Rng): number {
 }
 
 /**
+ * Escalonamento por andar: os esgotos ficam mais perigosos conforme o
+ * grupo desce. Multiplicadores lineares suaves — a curva agressiva fica
+ * para a fase de balanceamento (pós-08, decisão do Felipe).
+ */
+export interface ScaledMobStats {
+  maxHp: number;
+  accuracy: number;
+  evasion: number;
+  damageMin: number;
+  damageMax: number;
+  xpReward: number;
+}
+
+export function scaledMobStats(kind: MobKind, depth: number): ScaledMobStats {
+  const def = MOB_DEFS[kind];
+  const d = Math.max(0, depth - 1);
+  return {
+    maxHp: Math.round(def.maxHp * (1 + 0.35 * d)),
+    accuracy: def.accuracy + d,
+    evasion: def.evasion + Math.floor(d / 2),
+    damageMin: def.damageMin + Math.floor(d / 2),
+    damageMax: def.damageMax + Math.ceil(d / 2),
+    xpReward: def.xpReward + d,
+  };
+}
+
+/** Andares fundos têm mais mobs: 4–8 no andar 1, +1 no piso do intervalo por andar. */
+export function rollMobCountForDepth(rng: Rng, depth: number): number {
+  const bonus = Math.min(3, Math.max(0, depth - 1));
+  return rng.nextInt(MOB_COUNT_MIN + bonus, MOB_COUNT_MAX + bonus);
+}
+
+/**
  * Sorteia a espécie pelo peso. Nos andares mais fundos dos esgotos os
  * pesos deslocam levemente para gnoll/caranguejo (depth 1–5).
  */
