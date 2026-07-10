@@ -20,7 +20,7 @@ export class ChatBox {
 
     this.input = document.createElement("input");
     this.input.maxLength = CHAT_MAX_LENGTH;
-    this.input.placeholder = "diga algo... (Enter envia · Esc fecha)";
+    this.input.placeholder = "diga algo... (Enter envia · Esc fecha · /ping mostra a latência)";
     this.input.autocomplete = "off";
     this.wrap.appendChild(this.input);
     document.body.appendChild(this.wrap);

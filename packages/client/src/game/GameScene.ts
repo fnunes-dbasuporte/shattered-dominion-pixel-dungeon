@@ -230,7 +230,7 @@ export class GameScene extends Phaser.Scene {
     this.input.keyboard!.on("keydown-ESC", () => this.invPanel.close());
 
     this.chat = new ChatBox(
-      (text) => this.conn.sendChat(text),
+      (text) => this.submitChat(text),
       (open) => {
         this.input.keyboard!.enabled = !open;
         if (open) this.input.keyboard!.resetKeys();
@@ -251,6 +251,7 @@ export class GameScene extends Phaser.Scene {
       showResultScreen(msg, () => this.conn.leaveToLobby());
     });
     this.conn.onChat((c) => {
+      if (c.senderId === this.conn.sessionId) return; // o eco local já mostrou
       this.pushLog(`${c.name}: ${c.text}`);
       this.showBalloon(c.senderId, c.text);
     });
@@ -285,6 +286,44 @@ export class GameScene extends Phaser.Scene {
 
   /** Hook para subclasses limparem estado dependente do andar. */
   protected onFloorReset(): void {}
+
+  /**
+   * Envio do chat. Mensagens ganham ECO LOCAL imediato — esperar o broadcast
+   * voltar do servidor fazia o envio parecer perdido em conexões lentas.
+   * Comandos começam com "/" e nunca vão ao servidor.
+   */
+  private submitChat(text: string): void {
+    if (text.startsWith("/")) {
+      this.runChatCommand(text);
+      return;
+    }
+    this.conn.sendChat(text);
+    this.pushLog(`${this.myName()}: ${text}`);
+    this.showBalloon(this.conn.sessionId, text);
+  }
+
+  private runChatCommand(command: string): void {
+    if (command === "/ping") {
+      const ms = this.conn.pingMs;
+      if (ms < 0) {
+        this.pushLog("ping: ainda medindo — tente de novo em 2s");
+        return;
+      }
+      const rotulo = ms < 100 ? "boa" : ms < 250 ? "razoável" : "ALTA";
+      this.pushLog(`ping: ${ms}ms até o servidor (latência ${rotulo})`);
+      return;
+    }
+    this.pushLog(`comando desconhecido: ${command} — disponível: /ping`);
+  }
+
+  private myName(): string {
+    const players = (
+      this.conn.room.state as {
+        players?: { get?: (id: string) => { name?: string } | undefined };
+      }
+    ).players;
+    return players?.get?.(this.conn.sessionId)?.name ?? "você";
+  }
 
   /** Balão curto sobre o herói; some após 4s (morre junto se o ator sair do FOV). */
   private showBalloon(actorId: string, text: string): void {
