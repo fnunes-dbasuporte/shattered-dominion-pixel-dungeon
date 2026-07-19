@@ -21,6 +21,7 @@
     "lint": "eslint . && prettier --check .",
     "format": "prettier --write .",
     "viz": "tsx tools/viz/generate.ts",
+    "site:art": "tsx tools/site/render-vitrine.ts",
     "loadtest": "pnpm --filter @shattered-dominion/server loadtest",
     "assets:gen": "tsx tools/assets/download.ts"
   },

@@ -145,3 +145,37 @@ A v1.0 **não usa banco** (runs efêmeras). Os DBs `shattered_dominion` e
 `shattered_dominion_test` (role `shattered_app`) já existem no Postgres da
 VM e ficam **reservados para a expansão** (contas/persistência) — não
 remover nem reutilizar.
+
+## 7. Vitrine no site
+
+O site tem um padrão próprio para jogo publicado, com **duas peças**: a
+vitrine em `/<slug>.html` (landing de marketing, servida do docroot
+`/usr/share/nginx/html/`) e o jogo em `/<slug>/`. Aqui o slug da vitrine é
+`shattered-dominion-pixel-dungeon` e o do jogo continua `shattered-dominion`.
+
+| Peça               | Onde                                                                                  |
+| ------------------ | ------------------------------------------------------------------------------------- |
+| Vitrine            | `/usr/share/nginx/html/shattered-dominion-pixel-dungeon.html` (fonte: `deploy/site/`) |
+| Capa 1280×720      | `assets/img/covers/shattered-dominion-pixel-dungeon.png`                              |
+| 3 capturas 960×540 | `assets/img/shots/shattered-dominion-pixel-dungeon-{1,2,3}.png`                       |
+| Card no catálogo   | `/usr/share/nginx/html/index.html` (arquivo **compartilhado** — backup antes)         |
+
+A página reusa o `assets/css/styles.css` do site; **não** duplique CSS nela.
+
+A arte não é feita à mão: `pnpm site:art` renderiza capa e capturas a partir
+do jogo de verdade (`generateLevel` real, os PNGs de tile e sprite do
+cliente, o mesmo fog of war e o mesmo zoom 2×), sem navegador. A saída em
+`tools/site/out/` é artefato — não vai para o git.
+
+```bash
+pnpm site:art
+scp deploy/site/shattered-dominion-pixel-dungeon.html lightsail:/tmp/
+scp tools/site/out/covers/*.png tools/site/out/shots/*.png lightsail:/tmp/
+# na VM: install -o www-data -g www-data -m 644 nos destinos da tabela acima
+```
+
+**Nada de nginx aqui**: são arquivos estáticos no docroot, já cobertos pelo
+`location /`. Só o `index.html` é arquivo compartilhado com os outros jogos —
+faça `sudo cp -a index.html index.html.bak-shattered-<stamp>` antes de trocar,
+preserve o dono `root:root` e reconfira os vizinhos (`/`, `/pixelflap/`,
+`/zombie-rush/`, `/aventuras97/`…) em 200 depois.

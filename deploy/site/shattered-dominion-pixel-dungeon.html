@@ -1,0 +1,265 @@
+<!doctype html>
+<!--
+  Vitrine do jogo no site pixelforgegames.com.br — segue o padrão da casa
+  (assets/css/styles.css compartilhado, capa 1280x720, galeria de 3 capturas).
+
+  Instalação:
+    scp deploy/site/shattered-dominion-pixel-dungeon.html lightsail:/tmp/
+    ssh lightsail 'sudo install -o root -g root -m 644 \
+      /tmp/shattered-dominion-pixel-dungeon.html /usr/share/nginx/html/'
+  URL: https://www.pixelforgegames.com.br/shattered-dominion-pixel-dungeon.html
+
+  Capa e capturas: tools/site/render-vitrine.mjs (renderiza mapa e sprites reais).
+-->
+<html lang="pt-BR">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta
+      name="description"
+      content="Shattered Dominion Pixel Dungeon: rogue-like de masmorra para até 8 jogadores na mesma run. Código de sala, visão individual, morte com espectador e revive. Grátis no navegador e open source."
+    />
+    <title>Shattered Dominion Pixel Dungeon | Rogue-like multiplayer 16-bit</title>
+    <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml" />
+    <link rel="stylesheet" href="assets/css/styles.css" />
+  </head>
+  <body>
+    <a class="skip-link" href="#conteudo">Pular para o conteúdo</a>
+
+    <header class="site-header">
+      <div class="container navbar">
+        <a class="brand" href="index.html">
+          <span class="logo-mark" aria-hidden="true"></span>
+          <span>Pixel Forge Games <small>16-bit indie studio</small></span>
+        </a>
+        <button class="mobile-toggle" aria-expanded="false" aria-controls="menu-principal">
+          Menu
+        </button>
+        <nav class="nav-links" id="menu-principal" aria-label="Menu principal">
+          <a href="index.html#jogos">Jogos</a>
+          <a href="index.html#estudio">Estúdio</a>
+          <a href="/shattered-dominion/">Jogar</a>
+          <a href="pagamento.html">Loja</a>
+        </nav>
+      </div>
+    </header>
+
+    <main id="conteudo">
+      <section class="page-hero">
+        <div class="container hero-grid">
+          <div>
+            <nav class="breadcrumb" aria-label="Breadcrumb">
+              <a href="index.html">Início</a><span>/</span
+              ><span>Shattered Dominion Pixel Dungeon</span>
+            </nav>
+            <p class="kicker">Rogue-like • Multiplayer • Até 8 jogadores</p>
+            <h1>Shattered Dominion <span class="glow">Pixel Dungeon</span></h1>
+            <p class="lead">
+              Desça os Esgotos com até sete companheiros na mesma masmorra. 🗡️ Um código de seis
+              letras junta o grupo, cada herói enxerga só o que a própria tocha alcança — e no
+              quinto andar tem um Amálgama de Lodo esperando.
+              <strong>Grátis, direto no navegador.</strong>
+            </p>
+            <div class="hero-actions">
+              <a class="btn xl" href="/shattered-dominion/">▶ Jogar grátis</a>
+              <a class="btn ghost" href="#como-funciona">Como funciona</a>
+            </div>
+            <div class="tags" style="margin-top: 1.4rem">
+              <span class="tag">Rogue-like</span>
+              <span class="tag">Multiplayer</span>
+              <span class="tag">Cooperativo</span>
+              <span class="tag">Pixel-art</span>
+              <span class="tag">Open source</span>
+            </div>
+          </div>
+          <div class="cover-banner">
+            <img
+              src="assets/img/covers/shattered-dominion-pixel-dungeon.png"
+              alt="Capa de Shattered Dominion Pixel Dungeon: quatro heróis em pixel art numa sala iluminada dos Esgotos, com um rato e um gnoll por perto e o resto da masmorra escurecido em volta."
+            />
+          </div>
+        </div>
+      </section>
+
+      <section class="section" id="como-funciona">
+        <div class="container split-panel">
+          <div class="big-panel">
+            <p class="kicker">Proposta do jogo</p>
+            <h2>Uma masmorra. <span class="glow">Oito heróis.</span></h2>
+            <p class="lead">
+              Rogue-like clássico — turnos, permadeath, itens sem rótulo — só que a masmorra é a
+              mesma para todo mundo ao mesmo tempo. O servidor resolve cada turno dez vezes por
+              segundo, então ninguém espera a vez de ninguém: o grupo se espalha pelos corredores,
+              grita pelo chat quando acha a escada e decide junto quando descer. Cinco andares dos
+              Esgotos, um chefe no fim e o Amuleto do Domínio para quem chegar lá.
+            </p>
+            <div class="stat-row">
+              <div class="stat"><strong>8</strong><span>jogadores na mesma run</span></div>
+              <div class="stat"><strong>5</strong><span>andares até o chefe</span></div>
+              <div class="stat"><strong>0</strong><span>instalação ou cadastro</span></div>
+            </div>
+          </div>
+
+          <div class="card">
+            <h3>Como se joga</h3>
+            <div class="feature-list">
+              <div class="feature-item">
+                Crie a sala e passe o código de seis letras. Quem tiver o código entra — até oito, e
+                dá para entrar com a run já em andamento.
+              </div>
+              <div class="feature-item">
+                Ande com as setas ou WASD, nas oito direções. Andar para cima de um inimigo é
+                atacar: não existe botão de ataque.
+              </div>
+              <div class="feature-item">
+                Cada jogador só recebe o que está no próprio campo de visão. O mapa já andado fica
+                na memória; o resto é escuridão de verdade.
+              </div>
+              <div class="feature-item">
+                Poções e pergaminhos vêm sem rótulo, com cor e símbolo sorteados a cada run — e o
+                que você identificou vale só para você.
+              </div>
+              <div class="feature-item">
+                A descida é por voto: o andar só vira quando o grupo concorda. Quem morreu volta com
+                metade da vida no andar seguinte.
+              </div>
+              <div class="feature-item">
+                Caiu a conexão? Seu herói adormece invulnerável por um minuto e o F5 te devolve à
+                mesma partida, no mesmo corpo.
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="section">
+        <div class="container">
+          <div class="section-header">
+            <div>
+              <p class="kicker">Pilares</p>
+              <h2>Por que <span class="glow">jogar junto</span> muda tudo</h2>
+            </div>
+            <p>
+              Rogue-like é gênero de decisão arriscada. Com mais gente na mesma masmorra, a decisão
+              deixa de ser só sua — e é aí que fica interessante.
+            </p>
+          </div>
+
+          <div class="grid-3">
+            <article class="card">
+              <h3>Cada um enxerga o seu</h3>
+              <p>
+                O servidor manda para cada jogador apenas o que aquele herói vê. Não é névoa
+                desenhada por cima do mapa inteiro: a informação nem sai do servidor. Quem se separa
+                do grupo está sozinho de verdade.
+              </p>
+            </article>
+            <article class="card">
+              <h3>Morrer não te tira do jogo</h3>
+              <p>
+                Caído, você vira espectador e acompanha a masmorra pelos olhos de quem continua vivo
+                — torcendo, avisando pelo chat. Quando o grupo desce a escada, você volta com metade
+                da vida.
+              </p>
+            </article>
+            <article class="card">
+              <h3>Grátis e aberto</h3>
+              <p>
+                O jogo roda no navegador, sem instalar nem criar conta, e o código é livre sob
+                GPL-3.0. Mecânicas inspiradas nos rogue-likes de masmorra clássicos, com arte e
+                código próprios.
+              </p>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <section class="section compact">
+        <div class="container">
+          <div class="section-header">
+            <div>
+              <p class="kicker">Galeria</p>
+              <h2>Imagens do <span class="glow">jogo</span></h2>
+            </div>
+            <p>
+              A masmorra como ela é gerada: salas e corredores sorteados a cada run, o campo de
+              visão recortando a escuridão e o chefe do quinto andar.
+            </p>
+          </div>
+          <div class="shots-gallery">
+            <div class="shot">
+              <img
+                src="assets/img/shots/shattered-dominion-pixel-dungeon-1.png"
+                alt="Exploração solo: o herói num corredor dos Esgotos, com o campo de visão iluminando só o que está por perto e o mapa já andado escurecido ao redor."
+                loading="lazy"
+              />
+            </div>
+            <div class="shot">
+              <img
+                src="assets/img/shots/shattered-dominion-pixel-dungeon-2.png"
+                alt="Três heróis de cores diferentes numa sala tomada por grama, cercados por um gnoll, um rato e um caranguejo."
+                loading="lazy"
+              />
+            </div>
+            <div class="shot">
+              <img
+                src="assets/img/shots/shattered-dominion-pixel-dungeon-3.png"
+                alt="A arena do quinto andar: o Amálgama de Lodo cercado por três heróis no salão de pedra e grama."
+                loading="lazy"
+              />
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section class="cta-band">
+        <div class="container cta-inner">
+          <div>
+            <h2>Quem chega vivo ao quinto andar?</h2>
+            <p>
+              Junte o grupo, escolha uma cor e desça. A masmorra é sorteada na hora — e nenhuma run
+              é igual à anterior.
+            </p>
+          </div>
+          <div class="hero-actions">
+            <a class="btn xl" href="/shattered-dominion/">▶ Jogar grátis</a>
+            <a class="btn ghost" href="index.html#jogos">Voltar ao catálogo</a>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <footer class="footer">
+      <div class="container footer-grid">
+        <div>
+          <h3>Pixel Forge Games</h3>
+          <p>
+            Shattered Dominion Pixel Dungeon é o rogue-like multiplayer do estúdio: uma masmorra,
+            até oito heróis e um chefe no fim.
+          </p>
+        </div>
+        <div>
+          <h4>Jogos</h4>
+          <a href="aventuras-97.html">Aventuras 97</a><a href="lumi.html">Lumi</a
+          ><a href="aura67afk.html">Aura 67 AFK</a
+          ><a href="pixelpaddelduel.html">Pixel Paddle Duel</a
+          ><a href="pixelflap.html">Pixel Flap</a><a href="zombie-rush.html">Zombie Rush</a>
+        </div>
+        <div>
+          <h4>Links</h4>
+          <a href="/shattered-dominion/">Jogar agora</a
+          ><a href="https://github.com/fnunes-dbasuporte/shattered-dominion-pixel-dungeon"
+            >Código no GitHub</a
+          ><a href="https://www.gnu.org/licenses/gpl-3.0.html">Licença GPL-3.0</a
+          ><a href="index.html#jogos">Catálogo</a>
+        </div>
+        <div>
+          <h4>Contato</h4>
+          <a href="mailto:felipe.esperante@gmail.com">felipe.esperante@gmail.com</a>
+        </div>
+      </div>
+    </footer>
+
+    <script src="assets/js/site.js"></script>
+  </body>
+</html>

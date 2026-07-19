@@ -1,2 +1,6 @@
 pnpm-lock.yaml
 LICENSE
+
+# Fora do repositório (ver .gitignore): infra da VM e settings locais do CLI
+.infra/
+.claude/settings.local.json

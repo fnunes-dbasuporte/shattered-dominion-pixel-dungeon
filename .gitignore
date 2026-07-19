@@ -6,6 +6,7 @@ dist-prod/
 coverage/
 .vite/
 tools/viz/out*.html
+tools/site/out/
 
 # Segredos
 .env
@@ -17,6 +18,7 @@ tools/viz/out*.html
 # Infra da VM de produção — NUNCA commitar (repo é público; contém IP, portas e detalhes de acesso)
 INFRA-VM-*.md
 docs/infra/INFRA-VM-*.md
+.infra/
 
 # Documentos de planejamento, orientação e testes manuais — apenas locais, fora do repo público
 PLANO-MESTRE.md
