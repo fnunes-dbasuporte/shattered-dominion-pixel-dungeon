@@ -42,15 +42,15 @@
         border: 14px solid transparent;
         border-image: url("assets/ui/panel.png") 32 round;
         image-rendering: pixelated;
-        padding: 20px 24px;
-        width: min(420px, 90vw);
+        padding: 26px 28px 24px;
+        width: min(440px, 92vw);
         display: flex;
         flex-direction: column;
-        gap: 14px;
+        gap: 22px;
       }
       .card h1 {
         font-size: 18px;
-        margin: 0 0 6px;
+        margin: 0;
         letter-spacing: 1px;
         text-align: center;
       }
@@ -58,12 +58,28 @@
         display: block;
         color: #9a96ad;
         font-size: 11px;
-        margin-top: 4px;
+        margin-top: 9px;
         letter-spacing: 0;
+      }
+      /* Cada painel espaça seus próprios blocos; o .card só separa título de painel. */
+      .painel {
+        display: flex;
+        flex-direction: column;
+        gap: 18px;
+      }
+      /* Rótulo colado no seu controle, longe do bloco seguinte. */
+      .campo {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+      }
+      .oculto {
+        display: none !important;
       }
       .card label {
         font-size: 12px;
         color: #9a96ad;
+        letter-spacing: 0.5px;
       }
       .card input {
         width: 100%;
@@ -72,9 +88,13 @@
         color: #e8e6f0;
         border: 1px solid #2c2740;
         border-radius: 4px;
-        padding: 10px;
+        padding: 11px 12px;
         font-family: monospace;
         font-size: 14px;
+      }
+      .card input:focus {
+        outline: none;
+        border-color: #4da3e8;
       }
       .card input#codigo {
         text-transform: uppercase;
@@ -85,10 +105,11 @@
         color: #0b0a10;
         border: 0;
         border-radius: 4px;
-        padding: 11px;
+        padding: 13px;
         font-family: monospace;
         font-size: 14px;
         font-weight: bold;
+        letter-spacing: 0.5px;
         cursor: pointer;
       }
       .card button:hover {
@@ -102,23 +123,37 @@
         opacity: 0.45;
         cursor: default;
       }
+      /* Separador com filete dos dois lados — dá ar entre os dois caminhos. */
       .divisor {
-        text-align: center;
+        display: flex;
+        align-items: center;
+        gap: 12px;
         color: #55506b;
         font-size: 12px;
+        margin: 2px 0;
+      }
+      .divisor::before,
+      .divisor::after {
+        content: "";
+        flex: 1;
+        height: 1px;
+        background: #2c2740;
       }
       .erro {
         color: #e8554d;
         font-size: 12px;
         min-height: 15px;
         margin: 0;
+        text-align: center;
       }
       .codigo-sala {
         font-size: 34px;
         letter-spacing: 10px;
+        /* o letter-spacing sobra à direita da última letra: compensa e centra */
+        text-indent: 10px;
         text-align: center;
         color: #e8c04d;
-        margin: 4px 0;
+        margin: 0;
         user-select: all;
       }
       .jogadores {
@@ -127,23 +162,27 @@
         padding: 0;
         display: flex;
         flex-direction: column;
-        gap: 4px;
+        gap: 9px;
         font-size: 13px;
       }
       .cores {
         display: flex;
-        gap: 8px;
+        gap: 12px;
+        padding: 2px 0;
       }
       .cor {
         width: 26px;
         height: 26px;
         border-radius: 50%;
-        border: 2px solid transparent;
+        border: 0;
         cursor: pointer;
         padding: 0;
       }
+      /* anel POR FORA do círculo: marcar a cor não muda o espaçamento da fileira */
       .cor.ativa {
-        border-color: #ffffff;
+        box-shadow:
+          0 0 0 2px #0b0a10,
+          0 0 0 4px #ffffff;
       }
       .dica {
         color: #9a96ad;

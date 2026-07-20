@@ -27,26 +27,34 @@ export function runLobby(): Promise<LobbyResult> {
   ui.innerHTML = `
     <div class="card">
       <h1>SHATTERED DOMINION<small>roguelike cooperativo até 8 jogadores</small></h1>
-      <div id="painel-entrada">
-        <label for="nome">Seu nome</label>
-        <input id="nome" maxlength="16" placeholder="Aventureiro" autocomplete="off" />
-        <label>Sua cor</label>
-        <div class="cores" id="cores">${PLAYER_COLORS.map(
-          (c, i) =>
-            `<button type="button" class="cor" data-cor="${i}" style="background:${hex(c)}"></button>`,
-        ).join("")}</div>
+      <div id="painel-entrada" class="painel">
+        <div class="campo">
+          <label for="nome">Seu nome</label>
+          <input id="nome" maxlength="16" placeholder="Aventureiro" autocomplete="off" />
+        </div>
+        <div class="campo">
+          <label>Sua cor</label>
+          <div class="cores" id="cores">${PLAYER_COLORS.map(
+            (c, i) =>
+              `<button type="button" class="cor" data-cor="${i}" style="background:${hex(c)}"></button>`,
+          ).join("")}</div>
+        </div>
         <button id="btn-criar">Criar sala</button>
-        <p class="divisor">— ou entre numa sala —</p>
-        <label for="codigo">Código da sala</label>
-        <input id="codigo" maxlength="6" placeholder="ABC123" autocomplete="off" />
+        <p class="divisor">ou entre numa sala</p>
+        <div class="campo">
+          <label for="codigo">Código da sala</label>
+          <input id="codigo" maxlength="6" placeholder="ABC123" autocomplete="off" />
+        </div>
         <button id="btn-entrar" class="secundario">Entrar</button>
         <p class="erro" id="erro-entrada"></p>
       </div>
-      <div id="painel-sala" style="display:none">
-        <p class="dica">compartilhe o código com o grupo</p>
-        <div class="codigo-sala" id="codigo-sala"></div>
+      <div id="painel-sala" class="painel oculto">
+        <div class="campo">
+          <p class="dica">compartilhe o código com o grupo</p>
+          <div class="codigo-sala" id="codigo-sala"></div>
+        </div>
         <ul class="jogadores" id="lista-jogadores"></ul>
-        <button id="btn-iniciar" style="display:none">Iniciar partida</button>
+        <button id="btn-iniciar" class="oculto">Iniciar partida</button>
         <p class="dica" id="dica-sala"></p>
       </div>
     </div>`;
@@ -112,8 +120,8 @@ export function runLobby(): Promise<LobbyResult> {
   });
 
   function mostrarSala(conn: GameConnection): void {
-    el<HTMLDivElement>("#painel-entrada").style.display = "none";
-    el<HTMLDivElement>("#painel-sala").style.display = "block";
+    el<HTMLDivElement>("#painel-entrada").classList.add("oculto");
+    el<HTMLDivElement>("#painel-sala").classList.remove("oculto");
     el<HTMLDivElement>("#codigo-sala").textContent = conn.roomCode;
 
     const lista = el<HTMLUListElement>("#lista-jogadores");
@@ -135,7 +143,7 @@ export function runLobby(): Promise<LobbyResult> {
         lista.appendChild(li);
       }
       const souHost = hostId === conn.sessionId;
-      btnIniciar.style.display = souHost ? "block" : "none";
+      btnIniciar.classList.toggle("oculto", !souHost);
       dica.textContent = souHost
         ? "você é o host — inicie quando todos chegarem"
         : "aguardando o host iniciar...";
