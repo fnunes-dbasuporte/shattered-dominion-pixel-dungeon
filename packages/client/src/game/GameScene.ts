@@ -865,17 +865,35 @@ export class GameScene extends Phaser.Scene {
     g.fillStyle(0xe8c04d);
     g.fillRect(12, 34, 180 * Math.min(1, xp / xpToNext), 4);
 
-    this.hudText.setText(`HP ${hp}/${maxHp} · Nv ${level} · $${this.you.gold} · I inventário`);
+    // as teclas ficam à vista: o Enter do chat só se anunciava DENTRO do chat
+    this.hudText.setText(
+      `HP ${hp}/${maxHp} · Nv ${level} · $${this.you.gold} · I inventário · Enter chat`,
+    );
     this.statusText.setText(this.you.statuses.includes("veneno") ? "☠ envenenado" : "");
   }
 
   private updateTopBar(visiveis: number): void {
     const total = (this.conn.room.state as { players?: { size?: number } }).players?.size ?? "?";
     const ping = this.conn.pingMs >= 0 ? ` · ping ${this.conn.pingMs}ms` : "";
-    const votos = this.descent ? ` · descer ${this.descent.votes}/${this.descent.needed} (G)` : "";
     this.topText.setText(
       `andar ${this.currentDepth} · sala ${this.conn.roomCode} · ${total} no grupo · ` +
-        `${visiveis} à vista${ping}${votos}`,
+        `${visiveis} à vista${ping}${this.dicaEscada()}`,
     );
+  }
+
+  /**
+   * Diz o que fazer na escada. O servidor só manda `descent` DEPOIS do primeiro
+   * voto, então sem isto quem pisa na escada não descobre que a tecla é G —
+   * a dica só aparecia depois de já ter apertado.
+   */
+  private dicaEscada(): string {
+    if (this.descent) return ` · descer ${this.descent.votes}/${this.descent.needed} (G)`;
+    if (!this.you.alive) return "";
+    const tile = this.grid.inBounds(this.you.x, this.you.y)
+      ? this.grid.get(this.you.x, this.you.y)
+      : TileType.Wall;
+    if (tile === TileType.StairsDown) return " · G para descer";
+    if (tile === TileType.StairsUp && this.currentDepth > 1) return " · G para subir";
+    return "";
   }
 }
