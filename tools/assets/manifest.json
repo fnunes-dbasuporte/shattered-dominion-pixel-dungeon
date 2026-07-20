@@ -157,15 +157,15 @@
     {
       "id": "hero",
       "pixellabId": "a99d5d17-4e44-4b29-88c7-2d9d82710758",
-      "prompt": "Create one game-ready 32x32 pixel-art RPG hero sprite inspired by classic Pixel Dungeon / Shattered Pixel Dungeon roguelike characters. A grizzled human warrior gripping a short sword, worn leather armor with a teal cloth sash. Style: tiny 16-bit dungeon crawler sprite, front-facing idle pose, slight 3/4 top-down view, transparent background, crisp pixels, 1-pixel dark outline, limited muted fantasy palette, chibi proportions, large square head, small body, short legs, simple black pixel eyes, no mouth, no antialiasing, no gradients, no blur, no text, no logo, no background. The sprite must be readable at very small size and look like an in-game roguelike asset. (prompt do Felipe; mode v3, 32px; mapeamento walk/idle VERIFICADO por analise de movimento das pernas — o nome de pasta do zip NAO e estavel entre downloads)",
+      "prompt": "Create one game-ready 32x32 pixel-art RPG hero sprite inspired by classic Pixel Dungeon / Shattered Pixel Dungeon roguelike characters. A grizzled human warrior gripping a short sword, worn leather armor with a teal cloth sash. Style: tiny 16-bit dungeon crawler sprite, front-facing idle pose, slight 3/4 top-down view, transparent background, crisp pixels, 1-pixel dark outline, limited muted fantasy palette, chibi proportions, large square head, small body, short legs, simple black pixel eyes, no mouth, no antialiasing, no gradients, no blur, no text, no logo, no background. The sprite must be readable at very small size and look like an in-game roguelike asset. (prompt do Felipe; ataque REGERADO em 20/07 como golpe de espada v3 — o cross_punch original deixava a arma parada na mao; mode v3, 32px; mapeamento walk/idle VERIFICADO por analise de movimento das pernas — o nome de pasta do zip NAO e estavel entre downloads)",
       "canvas": 56,
       "out": "sprites/hero.png",
       "zip": "https://api.pixellab.ai/mcp/characters/a99d5d17-4e44-4b29-88c7-2d9d82710758/download",
       "animMap": {
         "animating-bf6609fd": "walk",
         "animating": "idle",
-        "cross_punch_attack": "attack",
-        "falling_backward": "death"
+        "falling_backward": "death",
+        "swinging_a_sword_downward_in_a_wide_arc": "attack"
       },
       "recolor": true
     },
@@ -207,14 +207,13 @@
     },
     {
       "id": "boss",
-      "pixellabId": "6b85d1c2-e8d1-430b-9e01-4a244d187989",
-      "prompt": "Create one game-ready 32x32 pixel-art RPG boss monster sprite inspired by classic roguelike dungeon crawlers. A hulking amorphous mound of dark green sewer sludge, dripping thick ooze, one huge pale yellow eye off-center, rusty debris and a broken bone half-sunk in its body, bubbles bursting on its surface. Style: tiny 16-bit dungeon crawler sprite, slight 3/4 top-down view, crisp pixels, 1-pixel dark outline, limited muted fantasy palette, no antialiasing. (mode v3 size 32 — arte real 60x60, por isso canvas 64; walk east veio em pasta separada por retry de falha; mapeamento VERIFICADO por analise de movimento: walk 20-31, attack 44-60)",
-      "canvas": 64,
+      "pixellabId": "05d83b68-8075-4636-9ddb-86ca76048276",
+      "prompt": "A shapeless puddle of dark green sewer sludge spread flat across the floor. NO arms, NO legs, NO head, no torso — just a wide low mound of dripping ooze, much wider than it is tall, sagging and formless like a spilled slime. One huge pale yellow eye floating off-center in the goo. Rusty debris and a broken bone half-sunk in the slime. Bubbles bursting on the surface. Style: 16-bit dungeon crawler boss sprite, top-down view, crisp pixels, 1-pixel dark outline, limited muted fantasy palette, no antialiasing, no gradients (v3 size 64, view high top-down — arte real 61x59, canvas 128. REGERADO em 20/07: a versao anterior era size 32 e saia com 30px, MENOR que o heroi. Atencao: em size 64 com o prompt antigo o v3 desenha um GOLEM humanoide; e preciso negar bracos/pernas/cabeca explicitamente para manter a poca)",
+      "canvas": 128,
       "out": "sprites/boss.png",
-      "zip": "https://api.pixellab.ai/mcp/characters/6b85d1c2-e8d1-430b-9e01-4a244d187989/download",
+      "zip": "https://api.pixellab.ai/mcp/characters/05d83b68-8075-4636-9ddb-86ca76048276/download",
       "animMap": {
         "walk": "walk",
-        "walk-87877fa1": "walk",
         "attack": "attack"
       }
     }

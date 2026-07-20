@@ -11,8 +11,8 @@ export interface SheetMeta {
 /** Canvas padrão dos personagens 32px do Pixellab (v3 usa 56; menores são centralizados). */
 export const CHAR_CANVAS = 56;
 
-/** Canvas por textura quando difere do padrão — o boss tem arte 60px. */
-const FRAME_SIZES: Record<string, number> = { boss: 64 };
+/** Canvas por textura quando difere do padrão — o boss tem arte ~61px (2 tiles). */
+const FRAME_SIZES: Record<string, number> = { boss: 128 };
 
 /** hero-0..7 compartilham o meta de "hero"; mobs têm sheet própria.
  *  O lodo minion reutiliza a sheet do boss em escala menor (mesma criatura). */

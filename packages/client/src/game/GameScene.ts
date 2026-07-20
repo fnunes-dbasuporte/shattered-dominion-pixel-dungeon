@@ -782,7 +782,9 @@ export class GameScene extends Phaser.Scene {
 
     const sprite = this.add.sprite(0, 0, texture);
     // a arte do boss já é 60px (quase 2 tiles); o lodo é a mesma arte, miúda
-    if (actor.kind === "sludge") sprite.setScale(0.4);
+    // o lodo minion é a MESMA arte do boss, miúda: com o boss agora em ~61px,
+    // a escala cai para manter o minion no tamanho de sempre (~12px)
+    if (actor.kind === "sludge") sprite.setScale(0.2);
     partes.push(sprite);
 
     // nome na cor do jogador — reforça a identidade além do tecido do sprite

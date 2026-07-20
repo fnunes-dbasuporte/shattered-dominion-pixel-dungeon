@@ -1,7 +1,7 @@
 {
-  "frameWidth": 64,
-  "frameHeight": 64,
-  "columns": 7,
+  "frameWidth": 128,
+  "frameHeight": 128,
+  "columns": 9,
   "rows": {
     "still-south": {
       "row": 0,
@@ -21,35 +21,35 @@
     },
     "walk-south": {
       "row": 4,
-      "count": 7
-    },
-    "walk-north": {
-      "row": 5,
-      "count": 7
-    },
-    "walk-west": {
-      "row": 6,
-      "count": 7
+      "count": 9
     },
     "walk-east": {
+      "row": 5,
+      "count": 9
+    },
+    "walk-north": {
+      "row": 6,
+      "count": 9
+    },
+    "walk-west": {
       "row": 7,
-      "count": 7
+      "count": 9
     },
     "attack-south": {
       "row": 8,
-      "count": 7
+      "count": 9
     },
     "attack-east": {
       "row": 9,
-      "count": 7
+      "count": 9
     },
     "attack-north": {
       "row": 10,
-      "count": 7
+      "count": 9
     },
     "attack-west": {
       "row": 11,
-      "count": 7
+      "count": 9
     }
   }
 }
