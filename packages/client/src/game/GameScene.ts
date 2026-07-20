@@ -61,6 +61,13 @@ const TILE_TEXTURES: Record<number, string[]> = {
 /** Tint multiplicativo do fog: descoberto mas fora de visão. */
 const FOG_TINT = 0x555566;
 
+/**
+ * Fonte de todo o texto do jogo (mesma do DOM, declarada em index.html).
+ * `monospace` fica de reserva: o Phaser mede o texto na criação, e sem a fonte
+ * carregada a medida sai errada — por isso main.ts espera a woff2 antes de subir.
+ */
+const FONTE = "Silkscreen, monospace";
+
 /** Investida do golpe: quanto o sprite avança sobre o alvo, e em quanto tempo. */
 const INVESTIDA_PX = 9;
 const INVESTIDA_MS = 80;
@@ -165,20 +172,20 @@ export class GameScene extends Phaser.Scene {
     this.cameras.main.setBackgroundColor("#0b0a10");
 
     this.topText = this.add
-      .text(8, 8, "", { fontFamily: "monospace", fontSize: "12px", color: "#9a96ad" })
+      .text(8, 8, "", { fontFamily: FONTE, fontSize: "12px", color: "#9a96ad" })
       .setScrollFactor(0)
       .setDepth(100);
 
     this.hudGfx = this.add.graphics().setScrollFactor(0).setDepth(100);
     this.hudText = this.add
-      .text(12, 0, "", { fontFamily: "monospace", fontSize: "12px", color: "#e8e6f0" })
+      .text(12, 0, "", { fontFamily: FONTE, fontSize: "12px", color: "#e8e6f0" })
       .setScrollFactor(0)
       .setDepth(101);
 
     this.bossBarGfx = this.add.graphics().setScrollFactor(0).setDepth(100);
     this.bossBarText = this.add
       .text(0, 26, "", {
-        fontFamily: "monospace",
+        fontFamily: FONTE,
         fontSize: "12px",
         color: "#e8e6f0",
         stroke: "#0b0a10",
@@ -190,7 +197,7 @@ export class GameScene extends Phaser.Scene {
 
     this.logText = this.add
       .text(0, 0, "", {
-        fontFamily: "monospace",
+        fontFamily: FONTE,
         fontSize: "11px",
         color: "#9a96ad",
         align: "right",
@@ -203,9 +210,9 @@ export class GameScene extends Phaser.Scene {
       .text(
         0,
         60,
-        "VOCÊ MORREU — modo espectador\n(setas movem a câmera; um aliado na escada ▼ te revive)",
+        "VOCÊ MORREU — modo espectador\n(setas movem a câmera; a descida do grupo te revive)",
         {
-          fontFamily: "monospace",
+          fontFamily: FONTE,
           fontSize: "14px",
           color: "#e8554d",
           align: "center",
@@ -225,7 +232,7 @@ export class GameScene extends Phaser.Scene {
     >;
 
     this.statusText = this.add
-      .text(12, 0, "", { fontFamily: "monospace", fontSize: "12px", color: "#b35de8" })
+      .text(12, 0, "", { fontFamily: FONTE, fontSize: "12px", color: "#b35de8" })
       .setScrollFactor(0)
       .setDepth(101);
 
@@ -337,7 +344,7 @@ export class GameScene extends Phaser.Scene {
     const curto = text.length > 26 ? `${text.slice(0, 26)}…` : text;
     const balloon = this.add
       .text(0, -TILE_PX + 2, curto, {
-        fontFamily: "monospace",
+        fontFamily: FONTE,
         fontSize: "10px",
         color: "#0b0a10",
         backgroundColor: "#e8e6f0",
@@ -530,7 +537,7 @@ export class GameScene extends Phaser.Scene {
           break;
         case "death":
           dying.add(e.actorId);
-          if (!e.actorId.startsWith("mob-")) this.floatingText(e.x, e.y, "✝", "#e8554d");
+          if (!e.actorId.startsWith("mob-")) this.floatingText(e.x, e.y, "X", "#e8554d");
           this.spawnEffect("fx-poof", e.x, e.y, { from: 10, to: 32, duration: 380 });
           this.pushLog(e.actorId === this.conn.sessionId ? "VOCÊ morreu!" : `${e.name} morreu`);
           break;
@@ -663,7 +670,7 @@ export class GameScene extends Phaser.Scene {
   private floatingText(tileX: number, tileY: number, texto: string, cor: string): void {
     const t = this.add
       .text(tileToWorld(tileX), tileToWorld(tileY) - 10, texto, {
-        fontFamily: "monospace",
+        fontFamily: FONTE,
         fontSize: "12px",
         color: cor,
         stroke: "#0b0a10",
@@ -787,7 +794,7 @@ export class GameScene extends Phaser.Scene {
           : `#${PLAYER_COLORS[actor.colorIndex % PLAYER_COLORS.length].toString(16).padStart(6, "0")}`;
     const label = this.add
       .text(0, actor.kind === "boss" ? -38 : -26, actor.asleep ? `${actor.name} 💤` : actor.name, {
-        fontFamily: "monospace",
+        fontFamily: FONTE,
         fontSize: "10px",
         color: corDoNome,
         stroke: "#0b0a10",

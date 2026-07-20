@@ -133,10 +133,12 @@ export function runLobby(): Promise<LobbyResult> {
       lista.innerHTML = "";
       for (const [id, { nome, cor }] of jogadores) {
         const li = document.createElement("li");
-        const diamante = document.createElement("span");
-        diamante.textContent = "◆ ";
-        diamante.style.color = hex(PLAYER_COLORS[cor % PLAYER_COLORS.length]);
-        li.appendChild(diamante);
+        // quadrado desenhado em CSS, não o glifo ◆: a Silkscreen não o tem e
+        // ele cairia na fonte do sistema, destoando do resto
+        const marca = document.createElement("span");
+        marca.className = "marca-cor";
+        marca.style.background = hex(PLAYER_COLORS[cor % PLAYER_COLORS.length]);
+        li.appendChild(marca);
         li.append(
           `${nome}${id === hostId ? " (host)" : ""}${id === conn.sessionId ? " — você" : ""}`,
         );

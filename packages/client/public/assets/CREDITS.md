@@ -22,3 +22,14 @@ em `tools/assets/manifest.json`. Regeneração: `pnpm assets:gen --force`.
 
 As 8 variações de cor do herói são recolor programático (re-matiz do pano
 teal) feito por `tools/assets/compose.ts` — 1 geração, 8 saídas.
+
+## Fonte
+
+`fonts/silkscreen-{400,700}.woff2` — **Silkscreen**, de Jason Kottke
+(<https://github.com/googlefonts/silkscreen>), sob **SIL Open Font License 1.1**.
+A licença exige que acompanhe a fonte e está em `fonts/OFL.txt`.
+
+Não é asset gerado: é fonte de terceiro, com licença própria — por isso fica
+fora da cobertura GPL do resto deste diretório. Subconjunto latino (cobre todos
+os acentos do português). Os glifos `▼ ▲ ◆ ✝` **não existem** nela; onde eram
+usados, o jogo passou a desenhar formas em CSS ou a usar texto equivalente.

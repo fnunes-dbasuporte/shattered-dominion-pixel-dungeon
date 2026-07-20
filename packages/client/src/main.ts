@@ -4,7 +4,27 @@ import { GameConnection } from "./net/connection.js";
 import type { GameSceneData } from "./game/GameScene.js";
 import { WalkableGameScene } from "./game/WalkableGameScene.js";
 
+/**
+ * Garante a Silkscreen carregada antes de qualquer texto ser medido.
+ * O Phaser calcula largura e altura do texto no momento da criação: se a woff2
+ * ainda não chegou, ele mede com a fonte de reserva e o layout do HUD nasce
+ * torto — e não se corrige sozinho quando a fonte chega.
+ */
+async function esperaFonte(): Promise<void> {
+  if (!("fonts" in document)) return;
+  try {
+    await Promise.all([
+      document.fonts.load('16px "Silkscreen"'),
+      document.fonts.load('bold 16px "Silkscreen"'),
+    ]);
+  } catch {
+    // sem a fonte o jogo ainda roda com o monospace de reserva
+  }
+}
+
 async function main(): Promise<void> {
+  await esperaFonte();
+
   // F5/queda: tenta retomar a sessão desta aba antes de mostrar o lobby
   let data: GameSceneData;
   const retomada = await GameConnection.tryReconnect();
