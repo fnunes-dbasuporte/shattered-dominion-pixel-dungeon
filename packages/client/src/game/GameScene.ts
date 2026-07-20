@@ -61,6 +61,10 @@ const TILE_TEXTURES: Record<number, string[]> = {
 /** Tint multiplicativo do fog: descoberto mas fora de visão. */
 const FOG_TINT = 0x555566;
 
+/** Investida do golpe: quanto o sprite avança sobre o alvo, e em quanto tempo. */
+const INVESTIDA_PX = 9;
+const INVESTIDA_MS = 80;
+
 /** Centro do tile em pixels de mundo. */
 export const tileToWorld = (tile: number) => tile * TILE_PX + TILE_PX / 2;
 
@@ -508,10 +512,14 @@ export class GameScene extends Phaser.Scene {
       switch (e.type) {
         case "hit": {
           const paraMim = e.targetId === this.conn.sessionId;
-          this.floatingText(e.x, e.y, `-${e.damage}`, paraMim ? "#e8554d" : "#e8c04d");
-          this.flashActor(e.targetId);
           this.playAttackAnim(e.attackerId, e.x, e.y);
-          this.spawnSlash(e.attackerId, e.x, e.y);
+          // dano, flash e corte saem no ápice da investida — o impacto é ali,
+          // não na largada do golpe
+          this.time.delayedCall(INVESTIDA_MS, () => {
+            this.floatingText(e.x, e.y, `-${e.damage}`, paraMim ? "#e8554d" : "#e8c04d");
+            this.flashActor(e.targetId);
+            this.spawnSlash(e.attackerId, e.x, e.y);
+          });
           this.pushLog(`${e.attackerName} acertou ${e.targetName} (${e.damage})`);
           break;
         }
@@ -615,13 +623,40 @@ export class GameScene extends Phaser.Scene {
     });
   }
 
-  /** Vira o atacante para o alvo e toca o golpe uma vez. */
+  /** Vira o atacante para o alvo, toca o golpe e avança por cima dele. */
   private playAttackAnim(attackerId: string, targetX: number, targetY: number): void {
     const atk = this.atores.get(attackerId);
     if (!atk) return;
     atk.facing = facingFromDelta(targetX - atk.x, targetY - atk.y, atk.facing);
     playAnim(atk.sprite, atk.texture, "attack", atk.facing, () => {
       if (atk.container.active) playAnim(atk.sprite, atk.texture, "idle", atk.facing);
+    });
+    this.investida(atk, targetX, targetY);
+  }
+
+  /**
+   * Investida: o sprite avança na direção do alvo e volta. É isto que vende o
+   * golpe — a animação do spritesheet é um template de soco (`cross_punch`),
+   * com a arma parada na mão, então sozinha ela quase não lê como ataque.
+   *
+   * Move só o SPRITE: o container pertence à posição autoritativa do servidor
+   * (e é ele que o tween de movimento anima), e o nome e a barra de vida ficam
+   * parados, como devem.
+   */
+  private investida(atk: ActorSprite, targetX: number, targetY: number): void {
+    const dx = targetX - atk.x;
+    const dy = targetY - atk.y;
+    const dist = Math.hypot(dx, dy) || 1;
+    this.tweens.killTweensOf(atk.sprite); // golpes em sequência não acumulam deslocamento
+    this.tweens.add({
+      targets: atk.sprite,
+      x: (dx / dist) * INVESTIDA_PX,
+      y: (dy / dist) * INVESTIDA_PX,
+      duration: INVESTIDA_MS,
+      ease: "Quad.easeOut",
+      yoyo: true,
+      hold: 30,
+      onComplete: () => atk.sprite.setPosition(0, 0),
     });
   }
 
