@@ -127,6 +127,37 @@ curl -fsSI https://www.pixelforgegames.com.br/shattered-dominion/   # 200, HTTPS
 # jogo: abrir a URL, criar sala, jogar de fora da rede local (wss via proxy)
 ```
 
+### Smoke test de produção — rode depois de todo deploy
+
+```bash
+pnpm smoke:prod                       # ~30s, contra a produção
+pnpm smoke:prod -- --walk 60          # anda mais tempo (mais chance de achar mob)
+pnpm smoke:prod -- --endpoint ws://127.0.0.1:2567   # contra o dev local
+```
+
+Sobe 2 clientes reais com o mesmo `@colyseus/sdk` do jogo e joga de verdade
+pelo wss público: cria sala, entra por código, mede RTT, inicia a partida,
+anda com passos válidos, conversa, **cai e reconecta pelo token** (o caminho do
+F5) e desce de andar por voto. Sai com **código 1** se algo falhar — dá para
+encadear com o deploy.
+
+Cria uma sala real (efêmera, descartada no fim) e **não reinicia nada** — pode
+rodar com gente jogando. Cobre o caminho de rede que os testes de integração
+não alcançam: nginx, TLS, upgrade do WebSocket e latência real.
+
+Duas coisas que ele mede e que enganam quem olha de fora:
+
+- **Ticks, não mensagens.** A simulação roda a 10 ticks/s, mas a visão só é
+  enviada quando muda (`Match.collectVisions` compara com `lastVisionKey`) —
+  na prática ~1–2 mensagens/s por jogador andando. O teste afere o avanço do
+  campo `tick`, que é o que diz se o servidor está no ritmo certo.
+- **A simulação não para quando você cai.** A última intenção enfileirada ainda
+  resolve depois da queda, então o herói pode voltar do F5 um tile adiante.
+  Por isso a verificação tolera 1 tile de desvio — e exige vida e sala idênticas.
+
+O que ele **não** cobre: combate (os bots andam ao acaso e os mobs nascem
+dormindo), o boss, e qualquer coisa visual. Isso continua sendo teste manual.
+
 ## 5. Incidentes
 
 - **Serviço reiniciando em loop**: `journalctl -u shattered-dominion -e`;

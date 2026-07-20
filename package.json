@@ -23,9 +23,11 @@
     "viz": "tsx tools/viz/generate.ts",
     "site:art": "tsx tools/site/render-vitrine.ts",
     "loadtest": "pnpm --filter @shattered-dominion/server loadtest",
+    "smoke:prod": "tsx tools/smoke/prod.ts",
     "assets:gen": "tsx tools/assets/download.ts"
   },
   "devDependencies": {
+    "@colyseus/sdk": "0.17.43",
     "@eslint/js": "^10.0.1",
     "@types/pngjs": "^6.0.5",
     "concurrently": "^10.0.3",
